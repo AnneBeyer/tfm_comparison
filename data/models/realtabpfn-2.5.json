@@ -1,0 +1,249 @@
+{
+  "id": "realtabpfn-2.5",
+  "name": "RealTabPFN-2.5",
+  "tabarena_entry": "RealTabPFN-2.5 (tuned + ensembled)",
+  "family": "TabPFN",
+  "developer": "Prior Labs (Prior Labs GmbH, Freiburg; 'Prior Labs Team' report - model dev led by Leo Grinsztajn et al. with Noah Hollmann and Frank Hutter)",
+  "organization_type": "company",
+  "release_date": "2025-11-06",
+  "paper_title": "TabPFN-2.5: Advancing the State of the Art in Tabular Foundation Models (technical report; Real-TabPFN-2.5 is the real-data fine-tuned variant described in Sec. 3 and App. C)",
+  "links": {
+    "paper": "https://arxiv.org/abs/2511.08667",
+    "code": "https://github.com/PriorLabs/TabPFN",
+    "weights": "https://huggingface.co/Prior-Labs/tabpfn_2_5",
+    "docs": "https://docs.priorlabs.ai/models",
+    "pypi": "https://pypi.org/project/tabpfn/",
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/242"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": true,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights are downloadable from the gated Hugging Face repo Prior-Labs/tabpfn_2_5 (16 checkpoints: 9 classifier, 7 regressor) after accepting the license; since tabpfn 7.1.0 acceptance happens on the Prior Labs website (ux.priorlabs.ai, TABPFN_TOKEN for headless use). The TabArena entry uses the package defaults: classifier 'tabpfn-v2.5-classifier-v2.5_default.ckpt' (real-data fine-tuned) and regressor 'tabpfn-v2.5-regressor-v2.5_default.ckpt' (synthetic-only; the real-fine-tuned regressor checkpoints '_real' and '_real-variant' are only reachable through the tuned search space). Local inference via the tabpfn package (v6.0.0+; TabPFN-2.5 was the package default from 6.0.0 to 6.4.x). A hosted TabPFN-2.5 endpoint (tabpfn-client / REST, incl. the text-capable API-only 'TabPFN-2.5-Plus') was offered; the current docs list the base 2.5 model as 'Local tabpfn package' only, with the API now serving newer versions. Only inference and fine-tuning code is open; the synthetic prior generator, pretraining code and the distillation engine (TabPFN-as-MLP/TreeEns) are proprietary."
+  },
+  "license": {
+    "code": "Apache-2.0 (tabpfn package since v9.0.0, 2026-09-15; earlier 'Prior Labs License' = Apache-2.0 + attribution requirement)",
+    "weights": "TABPFN-2.5 License v1.1 (Prior Labs non-commercial license; v1.0 at release, revised 2025-12-09)",
+    "prior_or_data": "Synthetic prior generator and pretraining data not released (proprietary). The 43 real fine-tuning datasets are public OpenML/Kaggle datasets under their own terms; the curated corpus itself is not redistributed.",
+    "commercial_use": "no",
+    "non_commercial_use": "yes",
+    "notes": "Weights license (read in full): a Prior Labs non-commercial license whose text for 2.5 (v1.1, revised 2025-12-09) and 2.6 (v1.0, 2026-03-24) is identical apart from model name and date. Grant: non-exclusive, revocable, royalty-free license to use, create Derivatives of and Distribute the model 'solely for your Non-Commercial Purposes'. 'Non-Commercial Purpose' = testing, evaluation or research not tied to commercial gain, production deployment or revenue generation, explicitly including internal benchmarking, academic research, experimentation on private/public datasets and public data-science competitions (Kaggle etc.), provided results are not used in commercial decision-making, client deliverables or paid products. Explicitly NOT permitted: any revenue-generating activity, interaction with end users or production systems, training/fine-tuning/distilling other models for commercial use, competitive benchmarking for procurement, hosting the model or a Derivative as any hosted/API/SaaS service (even free), military, surveillance and biometric uses. Outputs may also only be used for Non-Commercial Purposes and may not be used to train a competitive model. Derivatives (incl. fine-tuned models) inherit all restrictions; distribution requires the license text plus an attribution NOTICE. The license is only offered to professional users (not consumers under German BGB s.13) and Prior Labs may terminate it at any time. Commercial/production use requires a separate Commercial Enterprise License (sales@priorlabs.ai) or use of the hosted API, which is governed by Prior Labs' general terms instead. Code: the tabpfn inference package was relicensed to plain Apache-2.0 in v9.0.0 (2026-09-15); before that it used the 'Prior Labs License' (Apache-2.0 plus an additional attribution requirement). The synthetic-prior/training code is not released. TabArena marks the model with commercial_use=False."
+  },
+  "architecture": {
+    "type": "2D (alternating feature-wise + sample-wise attention) in-context-learning transformer (TabPFNv2 design, deepened)",
+    "parameters_m": 11.0,
+    "parameters_note": "Classifier ~11M parameters, regressor ~10M (table 'Overview of previous TabPFN releases' in the TabPFN-3 and TabPFN-3.5 technical reports). Consistent with checkpoint sizes on Hugging Face: classifier .ckpt 42.9 MB, regressor 40.8 MB (fp32). The 2.5 report itself gives no parameter count.",
+    "layers": "24 transformer layers (classification) / 18 layers (regression); TabPFNv2 had 12",
+    "embedding_dim": null,
+    "attention_heads": null,
+    "attention_scheme": "Alternating dual attention per layer: attention across feature-group tokens within a row (feature-wise) and attention across rows (sample-wise) for permutation invariance; test rows attend to train rows with a train/test context separation that allows caching the training-set representation (KV cache, 'fit_with_cache'); 64 learned 'thinking' rows are prepended to every dataset to add computation and act as attention sinks; FlashAttention-3 and multi-GPU parallel evaluation of estimators. Embedding size and head count are not published (the package's architecture defaults, emsize 192 / 6 heads, come from TabPFNv2; the 2.5 checkpoints embed their own architecture config).",
+    "checkpoints": "separate classification & regression checkpoints (default classifier fine-tuned on real data; default regressor synthetic-only; 14 further experimental variants incl. large-features-L/XL, large-samples, real, real-large-features, quantiles, low-skew, small-samples)",
+    "regression_head": "distributional: full-support bar (Riemann) distribution over target bins ('FullSupportBarDistribution'), giving mean/median/mode/quantiles; bin count not stated for 2.5 (TabPFNv2 used 5,000 bins); regression target optionally power-transformed ('safepower') per estimator",
+    "feature_embedding": "Features are embedded in groups of 3 (TabPFNv2: 2) per cell token - linear encoder for classification, 2-layer MLP encoder for regression - with positional feature embeddings; targets embedded and added to train-row tokens; each estimator subsamples to at most 500 features; preprocessing per estimator: squashing scaler (robust scaling + soft clipping) or none/quantile transforms, ordinal encoding of common categories (shuffled) or numeric, optional SVD components ('svd_quarter_components') as extra global features, fingerprint feature.",
+    "key_innovations": [
+      "Deeper network than TabPFNv2 (12 -> 24 layers classification, 18 regression) with larger feature groups (2 -> 3) for faster training/inference",
+      "64 learned 'thinking' rows added to the input (extra compute / attention sinks, inspired by pause tokens and ViT registers)",
+      "2-layer MLP feature encoder for regression (replacing linear)",
+      "Substantially improved synthetic prior: broader set of distributions, scaled to more rows and features while keeping tasks hard",
+      "Real-TabPFN-2.5: continued pre-training on 43 curated real OpenML/Kaggle datasets deduplicated against TabArena and internal benchmarks (this record's variant)",
+      "New per-estimator preprocessing: robust scaling + soft clipping ('squashing scaler'), quantile transforms, SVD components; decision-threshold tuning and temperature scaling for custom metrics (calibration)",
+      "'TabPFN-tunes-TabPFN': ~100 pretraining runs on a sparse grid of ~50 hyperparameters, TabPFNv2 used as surrogate to score 10,000 configurations",
+      "Scales recommended limits 5x rows (50k) and 4x features (2k) vs TabPFNv2 (20x more cells) while being 1x-2.3x faster thanks to FlashAttention-3, multi-GPU and optimized preprocessing",
+      "Proprietary distillation engine (TabPFN-as-MLP / TabPFN-as-TreeEns) for low-latency deployment"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 10,
+    "max_classes_note": "Classification head is 10 classes wide (package guardrail MAX_NUMBER_OF_CLASSES=10; docs: 'Supports classification with up to 10 classes'). More classes via the tabpfn-extensions ManyClassClassifier (error-correcting output coding); TabArena runs >10-class datasets this way since 2026-09-22 (PR #607).",
+    "max_features": 2000,
+    "max_features_note": "Designed/validated for up to 2,000 features (report, HF card, package guardrail MAX_NUMBER_OF_FEATURES=2000). Each estimator sees at most 500 features (per-estimator subsampling); 'large-features-XL' variant can use 1,000 per estimator. Not tested beyond 2,000.",
+    "max_samples": 50000,
+    "max_samples_note": "Built and validated for up to 50,000 training rows (report Table 1, HF card 'Not tested for >50,000 samples', package guardrail MAX_NUMBER_OF_SAMPLES=50,000, override with ignore_pretraining_limits=True). The limit is not strict: the report shows strong results on TabArena datasets up to 100,000 rows, TabArena runs it with max_rows=100,000, and the Prior Labs docs and the TabPFN-3 report's version table now list 100,000 rows as the validated regime. Exploratory: ~160k x 500 (clf) / ~85k x 500 (reg) fit in an H100 80 GB with FP16 + FlashAttention-3.",
+    "missing_values": "native",
+    "categorical_features": "native: auto-detected (<=30 unique values with >=100 samples) or declared via categorical_features_indices; per-estimator ordinal ('ordinal_very_common_categories_shuffled') or numeric encoding; no manual encoding needed",
+    "text_features": false,
+    "other": "Probabilistic outputs (predict_proba; regression predictive distribution with quantiles); decision-threshold tuning and temperature calibration for a chosen metric (eval_metric/tuning_config, new in 2.5); embeddings (get_embeddings); KV-cache 'fit_with_cache' mode; fine-tuning API; extensions repo adds SHAP/interpretability, many-class, regression-via-classifier, data generation/outlier detection, time series (TabPFN-TS) and causal (T-/X-/S-learner) use. Text features only in the API-only 'TabPFN-2.5-Plus'."
+  },
+  "pretraining": {
+    "data_type": "synthetic + real",
+    "synthetic_prior_summary": "Stage 1 is the standard TabPFN-2.5 synthetic pretraining: 'trained purely on synthetically generated data' from an improved TabPFNv2-style prior of structural-causal-model tasks - Prior Labs 'broadened the set of distributions and scaled up to more data points and more features, while keeping the prediction tasks difficult'. No further details (SCM/DAG design, edge function types, number of sampled datasets, sequence lengths) are disclosed in the 2.5 report or model card; the prior code is proprietary.",
+    "synthetic_prior_types": [
+      "SCM (TabPFNv2-style structural causal models; broadened distribution set, details undisclosed)"
+    ],
+    "num_synthetic_datasets": null,
+    "num_synthetic_datasets_note": "Not stated anywhere in the report, model card or docs.",
+    "real_data": "Stage 2 (Real-TabPFN-2.5): continued pre-training on a curated corpus of 43 real-world tabular datasets - 20 from OpenML (e.g. higgs, connect_4, eeg-eye-state, gas-drift, mushroom, nursery, BNG(breast-w), fried, Internet Firewall Data) and 23 from Kaggle (e.g. L&T Vehicle Loan Default, Richter's Predictor, Sloan Digital Sky Survey DR14/DR16, CSGO Round Winner, Travel Insurance) - listed in App. C.1 of the report. Contamination control (App. C): a multi-tiered deduplication/filtering pipeline extending Real-TabPFN's, deduplicating against all internal benchmarks, the in-house validation suite and the full public TabArena suite, by automated cross-referencing of dataset identifiers, feature schemas and row-/column-level hashes plus manual metadata inspection; any dataset overlapping with or derived from an evaluation dataset was excluded. No deduplication against TALENT is claimed. Only the classifier default checkpoint is real-fine-tuned; the regressor '_real' checkpoints are non-default variants.",
+    "objective": "Not stated for the 2.5 synthetic stage (PFN-style supervised ICL objective on held-out query targets: cross-entropy for classification, bar-distribution cross-entropy for regression in the TabPFN lineage). The real-data stage 'follows Real-TabPFN' (arXiv:2507.03971), whose objective is cross-entropy plus an L2-SP regularizer (alpha/2 * ||w - w0||^2, alpha = 0.003) pulling weights toward the synthetic-pretrained starting point to limit catastrophic forgetting; the exact values used for 2.5 are not disclosed.",
+    "optimizer": "Not disclosed for TabPFN-2.5 pretraining. Real-TabPFN recipe (v2-based, which 2.5 follows): AdamW with a reduced learning rate of 3e-7, linear warm-up followed by cosine annealing.",
+    "training_steps": "Not disclosed for 2.5. Real-TabPFN recipe: 20,000 continued-pre-training steps.",
+    "batch_size": "Not disclosed for 2.5. Real-TabPFN recipe: batch size 1 dataset per step, context of up to 20,000 rows (uniform subsample of larger datasets), 60% context / 40% query split, at most 400,000 cells per dataset.",
+    "hardware": "Not disclosed for 2.5 (Real-TabPFN v2 fine-tuning used a single NVIDIA RTX 2080 Ti; TabPFN-2.5 inference benchmarks used H100/A100/T4).",
+    "compute": "Not disclosed (no GPU-hours or cost figures for pretraining or fine-tuning).",
+    "training_cost_note": "Only indirect information: ~100 full pretraining runs on a sparse hyperparameter grid (~50 hyperparameters) were used for the 'TabPFN-tunes-TabPFN' surrogate search before the final compute-intensive runs; per-run cost is not reported.",
+    "curriculum": "Not disclosed for 2.5. Real-TabPFN found that larger continued-pre-training contexts (2,048 -> 20,000 rows) monotonically improve downstream accuracy and that curated large OpenML+Kaggle tables beat broad corpora (CommonCrawl, GitTables)."
+  },
+  "icl": {
+    "max_context_rows": 50000,
+    "context_note": "Pure in-context learning over the whole training set in one forward pass (no retrieval, no chunking of the context). 50,000 rows is the designed/recommended context; there is no hard architectural cap - memory is the limit (TabArena and the docs run it up to 100,000 rows; ~160k x 500 features fit on an H100 80 GB in FP16 for classification). Compute scales as O(r^2 * min(c,500) + r * min(c,500)^2) for r rows and c columns.",
+    "large_dataset_strategy": "None built in beyond guardrails: per-estimator feature subsampling to 500 features; optional per-estimator row subsampling (inference_config SUBSAMPLE_SAMPLES) that users/AutoGluon can set; memory_saving_mode batches test rows; ignore_pretraining_limits=True disables the 50k/2k guardrails. Prior Labs' answer for large data at the time was the proprietary distillation engine and, later, TabPFN-3.",
+    "test_time_ensembling": "Default n_estimators=8: each estimator uses a different preprocessing preset (two presets alternate: e.g. squashing-scaler + SVD + ordinal categoricals vs. none/numeric for classification; quantile-uniform vs. squashing-scaler for regression), a different feature permutation ('shuffle'), class-label permutation (classification) and regression target transform (none / safepower); outputs averaged; softmax_temperature 0.9. TabArena's 'tuned + ensembled' entry additionally searches over checkpoints, temperature, balance_probabilities, outlier-removal std, polynomial features, target transforms and preprocessing (up to 200 random configs; only 25 for datasets >50k rows) and post-hoc-ensembles the configurations; the report's own tuning used 60 random configurations.",
+    "fine_tuning": "Supported in the open package: tabpfn.finetuning.FinetunedTabPFNClassifier/Regressor (gradient-based full fine-tuning, default learning_rate 1e-5, epochs-based, multi-GPU DDP since 7.1.0, activation checkpointing); fine-tuned weights are Derivatives under the non-commercial license. RealTabPFN-2.5 itself is the outcome of continued pre-training on real data.",
+    "inference_notes": "Recommended H100/A100; CPU/MPS only for small data (CPU capped at 1,000 rows unless TABPFN_ALLOW_CPU_LARGE_DATASET). 'fit_with_cache' stores the training-set KV cache (~6.1 KB GPU + 48.8 KB CPU memory per training cell for classification, ~25% less for regression), making repeated predict() calls fast; otherwise every predict() re-runs the training context, so batch test rows (chunks of 1,000-10,000). PyTorch >= 2.8 and FlashAttention-3 recommended; estimators evaluated in parallel across GPUs."
+  },
+  "speed": {
+    "hardware_note": "Report timings: 1x and 4x NVIDIA H100 SXM 80 GB (Fig. 8), plus A100 SXM 40 GB and T4 15 GB (Fig. 18), fit + predict on 500 test rows for 100/300/500 features. TabArena's median fit/predict times (GPU) are in the leaderboard join.",
+    "memory_note": "Datasets with >500 features cost the same as 500 (per-estimator subsampling). Incomplete curves in Fig. 18 mark sizes that no longer fit in GPU memory (T4 first). Exploratory upper bounds on an H100 80 GB with FP16 + FA-3: ~160k x 500 (classification), ~85k x 500 (regression). KV-cache mode: ~6.1 KB GPU / 48.8 KB CPU per training cell.",
+    "speed_claims": "Fit+predict 1x-2.3x faster than TabPFNv2 depending on dataset size (same 8 estimators, 100 test rows, 1 H100) despite being deeper, due to larger feature groups and optimized preprocessing; prediction time scales linearly in the number of test rows; distilled TabPFN-as-MLP/TreeEns models give 'orders-of-magnitude lower latency'. TabPFNv2-compatible TabArena subset: default 2.5 has a 100% win rate vs default XGBoost on classification.",
+    "inference_cost_note": "Local use is free under the non-commercial license (own GPU). Hosted API via tabpfn-client/REST: free tier with daily/monthly limits, paid Pro/Max tiers (pricing on request; no per-cell price published). Commercial on-prem use needs a Commercial Enterprise License (sales@priorlabs.ai), which also includes the proprietary high-speed inference engine."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": true,
+      "source": "TabICLv2 paper, App. K (arXiv:2602.11139); the TabPFN-2.5 report does not evaluate on TALENT",
+      "protocol_note": "TALENT (Ye et al., 2024): 300 base datasets (120 binary, 80 multiclass, 100 regression), fixed 64/16/20 splits, accuracy (classification) / RMSE (regression), average rank; the TabICLv2 authors exclude their development datasets (the TabPFN-3.5 report describes this protocol as 300 minus 26 = 274 datasets). Run by the TabICLv2 authors with default (untuned) RealTabPFN-2.5, 8 estimators.",
+      "avg_rank": 5.11,
+      "elo": null,
+      "win_rate_vs": "TabICLv2 (default) wins 62% of datasets vs RealTabPFN-2.5 and 65% vs synthetic-only TabPFN-2.5 (binomial test p < 0.05); RealTabPFN-2.5 beats TabPFN-2.5 (5.11 vs 5.45 avg rank)",
+      "other": "Overall avg rank: TabICLv2 4.66, RealTabPFN-2.5 5.11, TabPFN-2.5 5.45, LimiX 8.34, TabPFNv2 8.82. Binary: accuracy rank RealTabPFN-2.5 4.82 vs TabICLv2 4.98 (tie), AUC 4.62 vs 3.31, log-loss 3.78 vs 2.83. Multiclass (<=10 classes): accuracy 5.64 vs 4.58, AUC 5.20 vs 3.38, log-loss 4.48 vs 2.67. Regression and small datasets: comparable; large datasets (>20k) and >10-class datasets (RealTabPFN-2.5 with ECOC): TabICLv2 clearly ahead; TabPFN-2.5 hit out-of-memory on the ~600k-row TALENT extension datasets."
+    },
+    "other": [
+      {
+        "name": "TabArena-Lite (report, own runs, 51 datasets, 1 fold)",
+        "value": "Default TabPFN-2.5: 100% win rate vs default XGBoost on classification datasets <=10k rows/500 features; 87% (classification) and 85% (regression) on all datasets up to 100k rows / 2k features; matches AutoGluon 1.4 extreme (4 h) on classification in one forward pass; Real-TabPFN-2.5 default beats every tuned+ensembled model on the larger classification datasets; tuned (60 configs) regression beats AutoGluon 1.4",
+        "source": "https://arxiv.org/abs/2511.08667"
+      },
+      {
+        "name": "TabArena (TabICLv2 paper re-analysis, 51 datasets, all folds)",
+        "value": "Avg rank: TabICLv2 (default) 4.82, AutoGluon 1.4 (extreme, 4h) 5.24, RealTabPFN-2.5 (tuned+ensembled) 5.88; TabICLv2 59% win rate vs RealTabPFN-2.5 (T+E); binary 4.43 vs 6.90, multiclass 6.75 vs 4.25 (RealTabPFN-2.5 better), regression 4.54 vs 4.54 (tie)",
+        "source": "https://arxiv.org/abs/2602.11139"
+      },
+      {
+        "name": "Prior Labs internal benchmark (>100 proprietary use cases, <=50k rows, up to 2k features)",
+        "value": "Default TabPFN-2.5 outperforms LightGBM/XGBoost/CatBoost tuned for 1 h in one forward pass (normalized-score plots, no single number)",
+        "source": "https://arxiv.org/abs/2511.08667"
+      },
+      {
+        "name": "RealCause causal benchmark (ACIC-2016, IHDP, Lalonde-CPS/PSID; PEHE)",
+        "value": "TabPFN-2.5 as T-Learner achieves the best PEHE overall; PFN-based CATE estimators occupy the first seven positions; TabPFN-2.5 beats TabPFNv2 and 60-s FLAML-tuned base models for S-/T-/X-learners",
+        "source": "https://arxiv.org/abs/2511.08667"
+      },
+      {
+        "name": "TabPFNv2 -> TabPFN-2.5 (TabArena, TabPFNv2 subset)",
+        "value": "TabPFN-2.5 outperforms TabPFNv2 on almost all datasets and is 'never much worse' (Fig. 2)",
+        "source": "https://arxiv.org/abs/2511.08667"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "vs TabPFNv2 (Nature 2025): same alternating row/column attention design but 12 -> 24 (classification) / 18 (regression) layers, feature-group size 2 -> 3, 2-layer MLP encoder for regression, 64 learned 'thinking' rows, substantially richer synthetic prior scaled to more rows and features, new per-estimator preprocessing (squashing scaler = robust scaling + soft clipping, quantile transforms, SVD components), calibration modules (decision-threshold tuning, temperature scaling), recommended limits 10,000 -> 50,000 rows and 500 -> 2,000 features (20x cells), 1x-2.3x faster fit+predict via FlashAttention-3, multi-GPU and optimized preprocessing, a proprietary distillation engine, and - for this Real-TabPFN-2.5 variant - continued pre-training on 43 curated real datasets (TabPFNv2's open-source checkpoints were synthetic-only; the earlier Real-TabPFN used 71 datasets). Parameters ~7M -> ~11M (classifier). License changed from the Prior Labs License (Apache-2.0 + attribution, commercial use allowed) to a non-commercial license.",
+  "sources": [
+    {
+      "title": "TabPFN-2.5: Advancing the State of the Art in Tabular Foundation Models (arXiv:2511.08667v2, 5 Feb 2026)",
+      "url": "https://arxiv.org/abs/2511.08667"
+    },
+    {
+      "title": "TabPFN-2.5 report, HTML version (Sec. 3 Model Overview, Sec. 4 Results, Sec. 5 speed, Sec. 6 License, App. C real-data fine-tuning, App. I inference time)",
+      "url": "https://arxiv.org/html/2511.08667"
+    },
+    {
+      "title": "Prior Labs: TabPFN-2.5 Model Report page",
+      "url": "https://priorlabs.ai/technical-reports/tabpfn-2-5-model-report"
+    },
+    {
+      "title": "Prior Labs docs: Models (limits, availability, model license FAQ)",
+      "url": "https://docs.priorlabs.ai/models"
+    },
+    {
+      "title": "Prior Labs docs: Changelog (only TabPFN-3, RelArena, TabPFN-3.5 entries; no 2.5/2.6 entries)",
+      "url": "https://docs.priorlabs.ai/changelog"
+    },
+    {
+      "title": "Prior Labs docs: Fine-Tuning",
+      "url": "https://docs.priorlabs.ai/capabilities/fine-tuning"
+    },
+    {
+      "title": "Prior Labs docs: Accessing model weights (license acceptance via Prior Labs account)",
+      "url": "https://docs.priorlabs.ai/models/accessing-model-weights"
+    },
+    {
+      "title": "Prior Labs pricing page (API tiers, commercial licensing)",
+      "url": "https://priorlabs.ai/pricing"
+    },
+    {
+      "title": "PriorLabs/TabPFN GitHub README (license section, limits, checkpoint FAQ)",
+      "url": "https://github.com/PriorLabs/TabPFN"
+    },
+    {
+      "title": "PriorLabs/TabPFN code LICENSE (Apache-2.0)",
+      "url": "https://github.com/PriorLabs/TabPFN/blob/main/LICENSE"
+    },
+    {
+      "title": "PriorLabs/TabPFN CHANGELOG.md (6.0.0 = TabPFN-2.5, 7.0.0 = TabPFN-2.6, 9.0.0 relicensing note)",
+      "url": "https://github.com/PriorLabs/TabPFN/blob/main/CHANGELOG.md"
+    },
+    {
+      "title": "TabPFN-3: Technical Report (arXiv:2605.13986) - Fig. 4 table with rows/features/parameter counts of TabPFN-2.5 and 2.6",
+      "url": "https://arxiv.org/abs/2605.13986"
+    },
+    {
+      "title": "TabPFN-3.5: Technical Report (arXiv:2609.17895) - same version table; TALENT protocol description",
+      "url": "https://arxiv.org/abs/2609.17895"
+    },
+    {
+      "title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv:2602.11139) - TabArena and TALENT results for (Real)TabPFN-2.5",
+      "url": "https://arxiv.org/abs/2602.11139"
+    },
+    {
+      "title": "TabArena leaderboard version history (copied 2026-09-23; v0.1.2 adds RealTabPFN-v2.5, v0.1.3.1 adds TabPFN-2.6)",
+      "url": "https://tabarena-leaderboard.hf.space"
+    },
+    {
+      "title": "TabArena model registry: tabpfnv2_5/info.py (license + commercial_use flags, dates)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabpfnv2_5/info.py"
+    },
+    {
+      "title": "TabArena model wrapper: tabpfnv2_5/model.py (checkpoints used, max_rows/max_features, ManyClassClassifier for >10 classes)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabpfnv2_5/model.py"
+    },
+    {
+      "title": "TabArena search space: tabpfnv2_5/hpo.py",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabpfnv2_5/hpo.py"
+    },
+    {
+      "title": "Hugging Face model card Prior-Labs/tabpfn_2_5 (checkpoint list, limits, architecture, licensing)",
+      "url": "https://huggingface.co/Prior-Labs/tabpfn_2_5"
+    },
+    {
+      "title": "TABPFN-2.5 License v1.1 (weights license text, last revised 2025-12-09)",
+      "url": "https://huggingface.co/Prior-Labs/tabpfn_2_5/blob/main/LICENSE"
+    },
+    {
+      "title": "tabpfn v6.0.0 release (2025-11-06): TabPFN-2.5 released",
+      "url": "https://github.com/PriorLabs/TabPFN/releases/tag/v6.0.0"
+    },
+    {
+      "title": "Real-TabPFN: Improving Tabular Foundation Models via Continued Pre-training With Real-World Data (arXiv:2507.03971) - recipe that Real-TabPFN-2.5 follows",
+      "url": "https://arxiv.org/abs/2507.03971"
+    },
+    {
+      "title": "TabArena PR #242 '[New Model] (Real)TabPFN-2.5' (merged 2025-11-18)",
+      "url": "https://github.com/autogluon/tabarena/pull/242"
+    },
+    {
+      "title": "TabArena PR #607 'RealTabPFN-2.5: run datasets with more than ten classes through the output coding' (2026-09-22)",
+      "url": "https://github.com/autogluon/tabarena/pull/607"
+    },
+    {
+      "title": "tabpfn package v7.1.1 inference_config.py (v2.5 guardrails: 10 classes / 2,000 features / 50,000 samples)",
+      "url": "https://github.com/PriorLabs/TabPFN/blob/v7.1.1/src/tabpfn/inference_config.py"
+    },
+    {
+      "title": "tabpfn package v7.1.1 preprocessing/presets.py (v2.5 vs v2.6 estimator presets)",
+      "url": "https://github.com/PriorLabs/TabPFN/blob/v7.1.1/src/tabpfn/preprocessing/presets.py"
+    }
+  ],
+  "notes": "Naming: the report calls it 'Real-TabPFN-2.5'; TabArena and TabICLv2 use 'RealTabPFN-2.5'. The tabarena_entry chosen is the tuned + ensembled variant, which at the 2026-09-23 leaderboard snapshot (v0.1.9.2) has Elo 1562 - a tie with TabICLv2 (default) at 1562 - whereas 'RealTabPFN-2.5 (tuned)' scores 1526 and 'RealTabPFN-2.5 (default)' only 1500 (all three carry TabArena's non-commercial '$' mark). TabArena added the model on 2025-11-22 (v0.1.2, 'verified'), from PR #242 (merged 2025-11-18; method date 2025-11-12). In TabArena the regression half of the entry uses the synthetic-only default regressor checkpoint. Numbers left null because no source states them: embedding dim, heads, number of synthetic pretraining datasets, steps, batch size, optimizer, hardware and compute of the 2.5 pretraining and of the 2.5 real-data stage (only the v2-based Real-TabPFN recipe is documented). Release date 2025-11-06 = report date and tabpfn v6.0.0; HF repo created 2025-11-03. TabPFN-2.5 was superseded as package default by TabPFN-2.6 (v7.0.0, 2026-03-24)."
+}

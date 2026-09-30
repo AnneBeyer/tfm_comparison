@@ -1,0 +1,1518 @@
+{
+ "benchmark": {
+  "name": "TALENT",
+  "url": "https://github.com/LAMDA-Tabular/TALENT",
+  "paper": "https://arxiv.org/abs/2407.00956",
+  "description": "TALENT (Tabular Analytics and LEarNing Toolbox) is a large-scale tabular benchmark and toolbox from the LAMDA group at Nanjing University. Its basic benchmark has 300 real-world datasets, each with one fixed 64%/16%/20% train/validation/test split; the official protocol runs every method in its default (or tuned) configuration with 15 random seeds, scores classification by accuracy and regression by RMSE, and aggregates by average rank across datasets. The toolbox implements 40+ classical and deep tabular methods and (as of 2025-26) wrappers for TabPFN v1/v2/v2.5/v3, Real-TabPFN, TabICL/TabICLv2, Mitra, LimiX, TabDPT and TabFM. Benchmark paper: 'A Closer Look at Deep Learning Methods on Tabular Datasets' (arXiv 2407.00956, v4 Nov 2025); toolbox paper: 'TALENT: A Tabular Analytics and Learning Toolbox' (arXiv 2407.04057).",
+  "num_datasets_total": 300,
+  "task_breakdown": "300 basic datasets: 120 binary classification, 80 multiclass classification (12 of them with more than 10 classes), 100 regression. Extensions: a 'large' benchmark (22 datasets) and later large-data / high-dimensional TALENT-extension datasets (the TabPFN-3.5 report evaluates 337 datasets with <= 1M training rows including extensions). Common subsets used by TFM papers: 274 = 300 minus the 26 TabPFN-2/TabICLv2 development datasets ('TabICLv2 protocol'; 173 cls <= 10 classes, 12 cls > 10 classes, 89 regression); 288 = 300 minus the 12 datasets with > 10 classes; 188 classification = 200 minus those 12.",
+  "official_leaderboard": "https://6sy666.github.io/TALENT-Results/ (also results/cls_bin.md, results/cls_multi.md, results/regression.md in the repo): per-dataset mean accuracy / RMSE over 15 seeds for 31 classical and deep methods; TabPFN v1 is the only foundation model included. The README's Performance-Efficiency-Size figure (dated 2025-10-05) additionally shows TabPFN v2 (figure only, no printed numbers). No official TALENT table lists any of the 2026 tabular foundation models compared here (checked 2026-09-23).",
+  "notes": "There is no official TALENT leaderboard for tabular foundation models; all numbers below are self-reported evaluations from model papers, each with its own dataset subset, context policy, comparison pool and metric, so tables from different sources must not be merged or compared directly. Elo values in particular are relative to each source's own pool (Random Forest anchored at 1000 in Mitra-v2 and LimiX-2). The TabPFN-3 report (arXiv 2605.13986) evaluates TabPFN-3 on the 274-dataset TabICLv2 protocol and per task type (Figures 13, 28), on the 4 many-class (100-class) datasets (Figure 29) and on 14 large-row (100k-1M) datasets (Figure 30), and states TabPFN-3 ranks first in each view, but prints no numbers (bar charts only); TabPFN-3's printed rank on that protocol (4.48) comes from the TabPFN-3.5 report, where TabPFN-3.5 was added to the pool. The Causilo technical report (arXiv 2609.22866) and the TabPFN-2.5 / RealTabPFN-2.5 report (arXiv 2511.08667, v2) contain no TALENT evaluation; TabFM (Google Research) has no paper or technical report and its GitHub repo publishes only TabArena result files, so all TabFM TALENT numbers come from third-party reports (EXAONE, Xiaomi-TabLDM, Mitra-v2, LimiX-2). TabPFN-3.5-Fast and Causilo have no TALENT numbers in any source; TabPFN-2.6 appears only in the Xiaomi-TabLDM report. Added 2026-09-30: NVIDIA Kumo Tabular's TALENT ranks are self-reported in its release blog only.",
+  "headline_note": "Tables flagged 'headline' are shown as columns in the main comparison table by default; all tables are listed in the TALENT section. Set \"headline\": true on a table to promote it."
+ },
+ "tables": [
+  {
+   "id": "tabiclv2-paper-avg-rank-all",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 274,
+   "results": {
+    "tabiclv2": 4.66,
+    "realtabpfn-2.5": 5.11,
+    "tabpfn-2.5": 5.45,
+    "limix": 8.34,
+    "tabpfnv2": 8.82
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2 (default, 32 estimators)",
+    "realtabpfn-2.5": "RealTabPFN-2.5 (fine-tuned on real data, 32 estimators)",
+    "tabpfn-2.5": "TabPFN-2.5 (not fine-tuned, 32 estimators)",
+    "limix": "LimiX (v1)",
+    "tabpfnv2": "TabPFNv2"
+   },
+   "notes": "Appendix K.2 'Results on all datasets'. Pairwise win rates of TabICLv2: 62% vs RealTabPFN-2.5, 65% vs TabPFN-2.5 (binomial test p=0.0018 on accuracy for TabICLv2 vs RealTabPFN-2.5, Table L.2). The CD diagram (Figure K.1) also contains TabICL, CatBoost, XGBoost and the other TALENT baselines, but their ranks are only in the figure and are omitted here. Main-text B.1 (Figure B.1, a different comparison pool that adds the TabICLv2 Stage-1/Stage-2 checkpoints) gives TabICLv2 (final Stage 3) an all-datasets average rank of 5.41 (Stage 1: 9.94, Stage 2: 5.69).",
+   "headline": true
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-binary-accuracy",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "binary",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 4.98,
+    "realtabpfn-2.5": 4.82,
+    "tabpfn-2.5": 5.28,
+    "tabicl": 8.48,
+    "limix": 8.61
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2",
+    "realtabpfn-2.5": "RealTabPFN-2.5",
+    "tabpfn-2.5": "TabPFN-2.5",
+    "tabicl": "TabICL (v1.1 checkpoint)",
+    "limix": "LimiX (v1)"
+   },
+   "notes": "Appendix K.3, binary classification datasets, ranked by accuracy. Number of binary datasets after removing the development datasets is not printed (120 in the full benchmark).",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-binary-auc",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank_auc",
+   "higher_is_better": false,
+   "task_scope": "binary",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 3.31,
+    "realtabpfn-2.5": 4.62,
+    "tabpfn-2.5": 5.45
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2",
+    "realtabpfn-2.5": "RealTabPFN-2.5",
+    "tabpfn-2.5": "TabPFN-2.5"
+   },
+   "notes": "Appendix K.3, binary classification datasets ranked by ROC AUC (supplementary TALENT metric).",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-binary-logloss",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank_logloss",
+   "higher_is_better": false,
+   "task_scope": "binary",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 2.83,
+    "realtabpfn-2.5": 3.78,
+    "tabpfn-2.5": 4.31
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2",
+    "realtabpfn-2.5": "RealTabPFN-2.5",
+    "tabpfn-2.5": "TabPFN-2.5"
+   },
+   "notes": "Appendix K.3, binary classification datasets ranked by log-loss (supplementary TALENT metric).",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-multiclass-accuracy",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "multiclass",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 4.58,
+    "realtabpfn-2.5": 5.64
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2",
+    "realtabpfn-2.5": "RealTabPFN-2.5"
+   },
+   "notes": "Appendix K.4, multiclass classification datasets with <= 10 classes, ranked by accuracy. Dataset count not printed.",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-multiclass-auc",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank_auc",
+   "higher_is_better": false,
+   "task_scope": "multiclass",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 3.38,
+    "realtabpfn-2.5": 5.2
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2",
+    "realtabpfn-2.5": "RealTabPFN-2.5"
+   },
+   "notes": "Appendix K.4, multiclass (<= 10 classes) datasets ranked by AUC.",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-multiclass-logloss",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank_logloss",
+   "higher_is_better": false,
+   "task_scope": "multiclass",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 2.67,
+    "realtabpfn-2.5": 4.48
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2",
+    "realtabpfn-2.5": "RealTabPFN-2.5"
+   },
+   "notes": "Appendix K.4, multiclass (<= 10 classes) datasets ranked by log-loss.",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-regression-mae",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15).",
+   "metric": "avg_rank_mae",
+   "higher_is_better": false,
+   "task_scope": "regression",
+   "num_datasets": null,
+   "results": {
+    "tabpfn-2.5": 4.43,
+    "tabiclv2": 4.63
+   },
+   "results_note": {
+    "tabpfn-2.5": "TabPFN-2.5",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Appendix K.6: TabICLv2 outperforms TabPFN-2.5 on RMSE and R^2 (numbers only in Figure K.12), while TabPFN-2.5 has a slight edge on MAE (4.43 vs 4.63 printed). Regression dataset count after removing development datasets not printed (100 in the full benchmark; 89 under the 274-dataset protocol as documented by Mitra-v2).",
+   "headline": false
+  },
+  {
+   "id": "tabiclv2-paper-avg-rank-large-datasets",
+   "source_title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "source_url": "https://arxiv.org/html/2602.11139",
+   "source_date": "2026-09",
+   "protocol": "TabICLv2 paper, Appendix K (numbers as printed in the text; the full comparisons are critical-difference diagrams, i.e. figures). TALENT base benchmark (300 datasets: 120 binary, 80 multiclass, 100 regression), fixed 64%/16%/20% train/validation/test split per dataset, minus the datasets used for TabICLv2 development ('for a fair comparison, we exclude the development datasets'; the TabPFN-3 and TabPFN-3.5 reports and the Mitra-v2 report, which reuse this protocol, document it as 300 - 26 = 274 datasets). Metric: average rank across datasets (lower is better) based on accuracy for classification and RMSE for regression unless stated otherwise. All models at default hyperparameters (no per-dataset tuning); 32 estimators for TabICLv2 and for TabPFN-2.5/RealTabPFN-2.5 on TALENT; TabICL uses the TabICLv1.1 checkpoint. Number of seeds not stated in the paper (TALENT's default is 15). This table comes from Appendix B.1 / Figure B.1 (pretraining-stage ablation): the comparison pool additionally contains the TabICLv2 Stage-1 and Stage-2 checkpoints, so ranks are not comparable with Appendix K; slice = TALENT datasets with more than 10K samples.",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": null,
+   "results": {
+    "tabiclv2": 4.71,
+    "realtabpfn-2.5": 6.35,
+    "xgboost": 14.6
+   },
+   "results_note": {
+    "tabiclv2": "TabICLv2 (Stage 3 = final pretraining stage)",
+    "realtabpfn-2.5": "RealTabPFN-2.5",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Large datasets (> 10K samples). TabICLv2 value is the final Stage-3 model; Stage 1 reached only 14.91, Stage 2 5.50. Whether the development datasets are excluded in Figure B.1 is not stated.",
+   "headline": false
+  },
+  {
+   "id": "exaone-report-mean-accuracy-classification",
+   "source_title": "EXAONE Tabular 1.0: Technical Report (arXiv 2608.25774, 26 Aug 2026)",
+   "source_url": "https://arxiv.org/html/2608.25774",
+   "source_date": "2026-08",
+   "protocol": "EXAONE Tabular 1.0 report, Section 4.5 / Figure 7. Classification: 188 of the 200 TALENT classification datasets (the 12 datasets with more than 10 classes are excluded so that all models share a common set); regression: all 100 TALENT regression datasets. All comparison models were run by the EXAONE authors from their official repositories and public checkpoints with their official preprocessing/inference and default settings; the training / in-context support set was capped at 50,000 samples per fold (drawn without replacement), validation and test splits unchanged; preprocessing fitted on the training split only. Metric: mean test accuracy (classification) and mean R^2 (regression) averaged over datasets, with 95% bootstrap CIs (error bars in the figure). Number of seeds/repeats not stated. Comparison pool: EXAONE Tabular, TabSwift, TabDPT, TabPFN-3, TabICLv2, LimiX (v1), TabFM.",
+   "metric": "mean_accuracy",
+   "higher_is_better": true,
+   "task_scope": "classification",
+   "num_datasets": 188,
+   "results": {
+    "tabfm": 0.863,
+    "exaone-tabular": 0.857,
+    "tabpfn-3": 0.854,
+    "tabiclv2": 0.854,
+    "tabdpt": 0.849,
+    "limix": 0.834
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular (classification model, default)",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "tabdpt": "TabDPT",
+    "limix": "LimiX (v1; LimiX-2 was released after this report)"
+   },
+   "notes": "Figure 7(a). TabSwift (not in this comparison's model list) scored 0.841. The paper notes the TabFM-EXAONE gap is only 0.006.",
+   "headline": true
+  },
+  {
+   "id": "exaone-report-mean-r2-regression",
+   "source_title": "EXAONE Tabular 1.0: Technical Report (arXiv 2608.25774, 26 Aug 2026)",
+   "source_url": "https://arxiv.org/html/2608.25774",
+   "source_date": "2026-08",
+   "protocol": "EXAONE Tabular 1.0 report, Section 4.5 / Figure 7. Classification: 188 of the 200 TALENT classification datasets (the 12 datasets with more than 10 classes are excluded so that all models share a common set); regression: all 100 TALENT regression datasets. All comparison models were run by the EXAONE authors from their official repositories and public checkpoints with their official preprocessing/inference and default settings; the training / in-context support set was capped at 50,000 samples per fold (drawn without replacement), validation and test splits unchanged; preprocessing fitted on the training split only. Metric: mean test accuracy (classification) and mean R^2 (regression) averaged over datasets, with 95% bootstrap CIs (error bars in the figure). Number of seeds/repeats not stated. Comparison pool: EXAONE Tabular, TabSwift, TabDPT, TabPFN-3, TabICLv2, LimiX (v1), TabFM.",
+   "metric": "mean_r2",
+   "higher_is_better": true,
+   "task_scope": "regression",
+   "num_datasets": 100,
+   "results": {
+    "exaone-tabular": 0.736,
+    "tabfm": 0.733,
+    "tabpfn-3": 0.728,
+    "tabiclv2": 0.723,
+    "tabdpt": 0.715,
+    "limix": 0.713
+   },
+   "results_note": {
+    "exaone-tabular": "EXAONE Tabular (regression model, default)",
+    "tabfm": "TabFM",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "tabdpt": "TabDPT",
+    "limix": "LimiX (v1)"
+   },
+   "notes": "Figure 7(b). TabSwift scored 0.708. Note: TALENT's native regression metric is RMSE; this source reports mean R^2 instead.",
+   "headline": true
+  },
+  {
+   "id": "xiaomi-report-avg-rank-all",
+   "source_title": "Xiaomi-TabLDM: A Tabular Foundation Model Technical Report (arXiv 2609.03880, v2 4 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.03880",
+   "source_date": "2026-09",
+   "protocol": "Xiaomi-TabLDM report, Section 4.1 / Figure 6 and Appendix B.2. 'Performance on the TALENT benchmark following the TabICLv2 evaluation protocol (Qu et al., 2026)': average rank across datasets (lower is better), accuracy as the classification metric and RMSE for regression; for methods with missing results on a subset of datasets the score entries are KNN-imputed following that protocol; 95% bootstrap CIs. The report describes TALENT as 300 datasets (120 binary / 80 multiclass / 100 regression) and states the regression rank is computed over 100 regression datasets; it does not say whether the 26 TabPFN-2/TabICLv2 development datasets were removed, so the overall dataset count is left null. Default configurations; number of seeds not stated. Models named in the text: TabFM, Xiaomi-TabLDM, EXAONE-Tabular, TabPFN-v3, TabICL-v2, TabPFN-v2.6 (further baselines appear only in Figure 6).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": null,
+   "results": {
+    "tabfm": 4.23,
+    "xiaomi-tabldm": 4.82,
+    "exaone-tabular": 4.96,
+    "tabpfn-3": 5.55,
+    "tabiclv2": 6.15,
+    "tabpfn-2.6": 6.79
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "exaone-tabular": "EXAONE-Tabular",
+    "tabpfn-3": "TabPFN-v3",
+    "tabiclv2": "TabICL-v2",
+    "tabpfn-2.6": "TabPFN-v2.6"
+   },
+   "notes": "Figure 6 (bottom panel), overall performance across task types; Xiaomi-TabLDM 'ranks second overall, behind only TabFM'.",
+   "headline": true
+  },
+  {
+   "id": "xiaomi-report-avg-rank-regression",
+   "source_title": "Xiaomi-TabLDM: A Tabular Foundation Model Technical Report (arXiv 2609.03880, v2 4 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.03880",
+   "source_date": "2026-09",
+   "protocol": "Xiaomi-TabLDM report, Section 4.1 / Figure 6 and Appendix B.2. 'Performance on the TALENT benchmark following the TabICLv2 evaluation protocol (Qu et al., 2026)': average rank across datasets (lower is better), accuracy as the classification metric and RMSE for regression; for methods with missing results on a subset of datasets the score entries are KNN-imputed following that protocol; 95% bootstrap CIs. The report describes TALENT as 300 datasets (120 binary / 80 multiclass / 100 regression) and states the regression rank is computed over 100 regression datasets; it does not say whether the 26 TabPFN-2/TabICLv2 development datasets were removed, so the overall dataset count is left null. Default configurations; number of seeds not stated. Models named in the text: TabFM, Xiaomi-TabLDM, EXAONE-Tabular, TabPFN-v3, TabICL-v2, TabPFN-v2.6 (further baselines appear only in Figure 6).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "regression",
+   "num_datasets": 100,
+   "results": {
+    "tabfm": 3.72,
+    "xiaomi-tabldm": 4.03,
+    "exaone-tabular": 4.15,
+    "tabpfn-3": 4.88,
+    "tabiclv2": 6.1,
+    "tabpfn-2.6": 6.33
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "exaone-tabular": "EXAONE-Tabular",
+    "tabpfn-3": "TabPFN-v3",
+    "tabiclv2": "TabICL-v2",
+    "tabpfn-2.6": "TabPFN-v2.6"
+   },
+   "notes": "Figure 3 / Section 4.1.1 'Regression performance': average rank across 100 regression datasets (RMSE).",
+   "headline": false
+  },
+  {
+   "id": "xiaomi-report-avg-rank-binary",
+   "source_title": "Xiaomi-TabLDM: A Tabular Foundation Model Technical Report (arXiv 2609.03880, v2 4 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.03880",
+   "source_date": "2026-09",
+   "protocol": "Xiaomi-TabLDM report, Section 4.1 / Figure 6 and Appendix B.2. 'Performance on the TALENT benchmark following the TabICLv2 evaluation protocol (Qu et al., 2026)': average rank across datasets (lower is better), accuracy as the classification metric and RMSE for regression; for methods with missing results on a subset of datasets the score entries are KNN-imputed following that protocol; 95% bootstrap CIs. The report describes TALENT as 300 datasets (120 binary / 80 multiclass / 100 regression) and states the regression rank is computed over 100 regression datasets; it does not say whether the 26 TabPFN-2/TabICLv2 development datasets were removed, so the overall dataset count is left null. Default configurations; number of seeds not stated. Models named in the text: TabFM, Xiaomi-TabLDM, EXAONE-Tabular, TabPFN-v3, TabICL-v2, TabPFN-v2.6 (further baselines appear only in Figure 6).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "binary",
+   "num_datasets": null,
+   "results": {
+    "xiaomi-tabldm": 5.72,
+    "exaone-tabular": 6.38,
+    "tabpfn-3": 6.8,
+    "tabiclv2": 6.9
+   },
+   "results_note": {
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "exaone-tabular": "EXAONE-Tabular",
+    "tabpfn-3": "TabPFN-v3",
+    "tabiclv2": "TabICL-v2"
+   },
+   "notes": "Figure 6 (top panel), binary classification (accuracy). The text says Xiaomi-TabLDM (5.72) is 'tying with TabFM for the best performance'; TabFM's exact value is not printed and is therefore omitted.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t7-elo-main274-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "all",
+   "num_datasets": 274,
+   "results": {
+    "tabfm": 1503.2,
+    "mitra-v2": 1479.7,
+    "exaone-tabular": 1451.8,
+    "tabpfn-3": 1414.8,
+    "tabiclv2": 1399.6,
+    "modernnca": 1166.9,
+    "realmlp": 1166.1,
+    "catboost": 1153.2,
+    "lightgbm": 1115.9,
+    "xgboost": 1091.9
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Table 7, joint main274 board, train-only context (headline). 95% intervals: TabFM +62/-56, Mitra-v2 +60/-54, EXAONE +52/-46, TabPFN-3 +54/-50, TabICLv2 +54/-49, ModernNCA +43/-42, RealMLP +45/-43, CatBoost +30/-29, LightGBM +29/-29, XGBoost +27/-25. The top three (TabFM, Mitra-v2, EXAONE) are statistically indistinguishable. Table 7 lists the top 12 of the pool by Elo; the two rows not in this comparison's model list are TabR (train-only Elo 1,142.6 / rank 12.22; train+val 1,143.3 / 12.25) and FT-Transformer (1,062.2 / 14.81; 1,062.4 / 14.84). Imputed cells out of 274 (train-only / train+val): TabFM 13 / 12, EXAONE 1 / 0, TabPFN-3 1 / 1, TabICLv2 1 / 1, ModernNCA 6 / 6, Mitra-v2 0 / 0, others 0 / 0.",
+   "headline": true
+  },
+  {
+   "id": "mitra-v2-report-t7-avg-rank-main274-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 274,
+   "results": {
+    "tabfm": 4.03,
+    "mitra-v2": 4.39,
+    "exaone-tabular": 4.83,
+    "tabpfn-3": 5.48,
+    "tabiclv2": 5.76,
+    "modernnca": 11.48,
+    "realmlp": 11.5,
+    "catboost": 11.89,
+    "lightgbm": 13.06,
+    "xgboost": 13.83
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Table 7 'Rank' column (average rank), joint main274 board, train-only context. Table 7 lists the top 12 of the pool by Elo; the two rows not in this comparison's model list are TabR (train-only Elo 1,142.6 / rank 12.22; train+val 1,143.3 / 12.25) and FT-Transformer (1,062.2 / 14.81; 1,062.4 / 14.84). Imputed cells out of 274 (train-only / train+val): TabFM 13 / 12, EXAONE 1 / 0, TabPFN-3 1 / 1, TabICLv2 1 / 1, ModernNCA 6 / 6, Mitra-v2 0 / 0, others 0 / 0.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t7-elo-main274-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "all",
+   "num_datasets": 274,
+   "results": {
+    "tabfm": 1527.7,
+    "mitra-v2": 1490.2,
+    "exaone-tabular": 1519.0,
+    "tabpfn-3": 1404.8,
+    "tabiclv2": 1393.9,
+    "modernnca": 1166.7,
+    "realmlp": 1166.1,
+    "catboost": 1154.7,
+    "lightgbm": 1116.0,
+    "xgboost": 1093.2
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Table 7, joint main274 board, train + val context. 95% intervals: TabFM +67/-58, Mitra-v2 +66/-60, EXAONE +57/-52, TabPFN-3 +52/-48, TabICLv2 +53/-49, ModernNCA +43/-42, RealMLP +45/-43, CatBoost +30/-29, LightGBM +29/-28, XGBoost +26/-26. Table 7 lists the top 12 of the pool by Elo; the two rows not in this comparison's model list are TabR (train-only Elo 1,142.6 / rank 12.22; train+val 1,143.3 / 12.25) and FT-Transformer (1,062.2 / 14.81; 1,062.4 / 14.84). Imputed cells out of 274 (train-only / train+val): TabFM 13 / 12, EXAONE 1 / 0, TabPFN-3 1 / 1, TabICLv2 1 / 1, ModernNCA 6 / 6, Mitra-v2 0 / 0, others 0 / 0.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t7-avg-rank-main274-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 274,
+   "results": {
+    "tabfm": 3.82,
+    "mitra-v2": 4.35,
+    "exaone-tabular": 3.94,
+    "tabpfn-3": 5.78,
+    "tabiclv2": 5.99,
+    "modernnca": 11.54,
+    "realmlp": 11.56,
+    "catboost": 11.9,
+    "lightgbm": 13.1,
+    "xgboost": 13.83
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Table 7 'Rank' column (average rank), joint main274 board, train + val context. Table 7 lists the top 12 of the pool by Elo; the two rows not in this comparison's model list are TabR (train-only Elo 1,142.6 / rank 12.22; train+val 1,143.3 / 12.25) and FT-Transformer (1,062.2 / 14.81; 1,062.4 / 14.84). Imputed cells out of 274 (train-only / train+val): TabFM 13 / 12, EXAONE 1 / 0, TabPFN-3 1 / 1, TabICLv2 1 / 1, ModernNCA 6 / 6, Mitra-v2 0 / 0, others 0 / 0.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-elo-cls-le10-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "classification",
+   "num_datasets": 173,
+   "results": {
+    "tabfm": 1518.8,
+    "mitra-v2": 1444.2,
+    "exaone-tabular": 1432.6,
+    "tabpfn-3": 1404.1,
+    "tabiclv2": 1402.2
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with at most ten classes (173 datasets, accuracy), train-only context.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-avg-rank-cls-le10-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "classification",
+   "num_datasets": 173,
+   "results": {
+    "tabfm": 3.93,
+    "mitra-v2": 5.16,
+    "exaone-tabular": 5.38,
+    "tabpfn-3": 5.94,
+    "tabiclv2": 5.98
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with at most ten classes (173 datasets, accuracy), train-only context; average rank given in parentheses in Table 8.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-elo-cls-gt10-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "multiclass",
+   "num_datasets": 12,
+   "results": {
+    "mitra-v2": 2070.1,
+    "tabpfn-3": 1850.3,
+    "tabiclv2": 1799.5,
+    "exaone-tabular": 1770.1
+   },
+   "results_note": {
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with more than ten classes (12 datasets, accuracy), train-only context. Mitra-v2 ranks first in the entire pool on this slice.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-avg-rank-cls-gt10-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "multiclass",
+   "num_datasets": 12,
+   "results": {
+    "mitra-v2": 2.08,
+    "tabpfn-3": 4.17,
+    "tabiclv2": 4.83,
+    "exaone-tabular": 5.25
+   },
+   "results_note": {
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with more than ten classes (12 datasets, accuracy), train-only context; average rank given in parentheses in Table 8.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-elo-regression-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "regression",
+   "num_datasets": 89,
+   "results": {
+    "mitra-v2": 1499.3,
+    "tabfm": 1480.2,
+    "exaone-tabular": 1466.7,
+    "tabpfn-3": 1395.3,
+    "tabiclv2": 1357.0
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: regression (89 datasets, RMSE), train-only context.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-avg-rank-regression-train-only",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN-ONLY (every in-context model uses the train split alone as its support set; TabFM and EXAONE Tabular were re-run accordingly over the same 15 seeds). This is the report's headline board (Figure 1).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "regression",
+   "num_datasets": 89,
+   "results": {
+    "mitra-v2": 3.75,
+    "tabfm": 4.01,
+    "exaone-tabular": 4.2,
+    "tabpfn-3": 5.33,
+    "tabiclv2": 6.01
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: regression (89 datasets, RMSE), train-only context; average rank given in parentheses in Table 8.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-elo-cls-le10-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "classification",
+   "num_datasets": 173,
+   "results": {
+    "tabfm": 1529.3,
+    "exaone-tabular": 1500.8,
+    "mitra-v2": 1448.7,
+    "tabpfn-3": 1396.0,
+    "tabiclv2": 1395.5
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with at most ten classes (173 datasets, accuracy), train + val context.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-avg-rank-cls-le10-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "classification",
+   "num_datasets": 173,
+   "results": {
+    "tabfm": 3.88,
+    "exaone-tabular": 4.3,
+    "mitra-v2": 5.18,
+    "tabpfn-3": 6.2,
+    "tabiclv2": 6.21
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with at most ten classes (173 datasets, accuracy), train + val context; average rank given in parentheses in Table 8.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-elo-cls-gt10-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "multiclass",
+   "num_datasets": 12,
+   "results": {
+    "mitra-v2": 2204.2,
+    "tabpfn-3": 1841.7,
+    "exaone-tabular": 1835.0,
+    "tabiclv2": 1809.2
+   },
+   "results_note": {
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with more than ten classes (12 datasets, accuracy), train + val context. Mitra-v2 ranks first in the entire pool on this slice.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-avg-rank-cls-gt10-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "multiclass",
+   "num_datasets": 12,
+   "results": {
+    "mitra-v2": 1.58,
+    "tabpfn-3": 4.5,
+    "exaone-tabular": 4.58,
+    "tabiclv2": 4.92
+   },
+   "results_note": {
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: classification with more than ten classes (12 datasets, accuracy), train + val context; average rank given in parentheses in Table 8.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-elo-regression-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "regression",
+   "num_datasets": 89,
+   "results": {
+    "exaone-tabular": 1532.6,
+    "tabfm": 1529.8,
+    "mitra-v2": 1516.1,
+    "tabpfn-3": 1382.0,
+    "tabiclv2": 1352.5
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: regression (89 datasets, RMSE), train + val context.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t8-avg-rank-regression-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Context policy of this table: TRAIN + VAL (TabFM, EXAONE Tabular and Mitra-v2 fold the validation rows into their in-context support at prediction time; TabPFN-3 and TabICLv2 keep train-only context, their stronger configuration).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "regression",
+   "num_datasets": 89,
+   "results": {
+    "exaone-tabular": 3.51,
+    "tabfm": 3.54,
+    "mitra-v2": 3.71,
+    "tabpfn-3": 5.71,
+    "tabiclv2": 6.24
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Table 8 (per-slice boards, foundation-model group only; slices rated independently). TabFM is absent from the > 10-class slice by construction (its API caps the class count at ten). Intervals on the 12-dataset many-class slice are wide. Slice: regression (89 datasets, RMSE), train + val context; average rank given in parentheses in Table 8.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t9-elo-full300-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Preset of this table: full300 (all 300 TALENT datasets, no exclusions), scored under the TRAIN + VAL context policy only. Rows marked * (TabPFN-3, TabICLv2) are not cleanly comparable: 26 of the 300 datasets are their development sets, the authors do not run those models on their own development data, so those 26 cells are imputed. The report treats main274 as the headline and full300 as a robustness check.",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "all",
+   "num_datasets": 300,
+   "results": {
+    "tabfm": 1516.6,
+    "exaone-tabular": 1510.4,
+    "mitra-v2": 1488.6,
+    "tabpfn-3": 1369.8,
+    "tabiclv2": 1361.8,
+    "realmlp": 1167.6,
+    "modernnca": 1164.0,
+    "catboost": 1155.4,
+    "lightgbm": 1116.2,
+    "xgboost": 1091.8
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3* (26 development-set cells imputed)",
+    "tabiclv2": "TabICLv2* (26 development-set cells imputed)",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Table 9, top 12 of the pool by Elo. Not in this comparison's list: TabR (Elo 1,150.1, rank 11.96, win rate 0.635) and FT-Transformer (1,065.7, 14.66, 0.545). Imputed cells out of 300: TabFM 12, EXAONE 0, Mitra-v2 0, TabPFN-3 26, TabICLv2 26, ModernNCA 6, others 0. 95% Elo intervals: TabFM +64/-58, EXAONE +55/-51, Mitra-v2 +69/-59, TabPFN-3 +50/-45, TabICLv2 +49/-45, RealMLP +41/-39, ModernNCA +39/-39, CatBoost +28/-27, LightGBM +28/-28, XGBoost +24/-25.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t9-avg-rank-full300-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Preset of this table: full300 (all 300 TALENT datasets, no exclusions), scored under the TRAIN + VAL context policy only. Rows marked * (TabPFN-3, TabICLv2) are not cleanly comparable: 26 of the 300 datasets are their development sets, the authors do not run those models on their own development data, so those 26 cells are imputed. The report treats main274 as the headline and full300 as a robustness check.",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 300,
+   "results": {
+    "tabfm": 3.86,
+    "exaone-tabular": 3.94,
+    "mitra-v2": 4.26,
+    "tabpfn-3": 6.34,
+    "tabiclv2": 6.5,
+    "realmlp": 11.43,
+    "modernnca": 11.54,
+    "catboost": 11.8,
+    "lightgbm": 13.02,
+    "xgboost": 13.8
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3* (26 development-set cells imputed)",
+    "tabiclv2": "TabICLv2* (26 development-set cells imputed)",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Table 9, top 12 of the pool by Elo. Not in this comparison's list: TabR (Elo 1,150.1, rank 11.96, win rate 0.635) and FT-Transformer (1,065.7, 14.66, 0.545). Imputed cells out of 300: TabFM 12, EXAONE 0, Mitra-v2 0, TabPFN-3 26, TabICLv2 26, ModernNCA 6, others 0. 95% Elo intervals: TabFM +64/-58, EXAONE +55/-51, Mitra-v2 +69/-59, TabPFN-3 +50/-45, TabICLv2 +49/-45, RealMLP +41/-39, ModernNCA +39/-39, CatBoost +28/-27, LightGBM +28/-28, XGBoost +24/-25.",
+   "headline": false
+  },
+  {
+   "id": "mitra-v2-report-t9-win-rate-full300-train-val",
+   "source_title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.04540v1",
+   "source_date": "2026-09",
+   "protocol": "Mitra-v2 report, Section 4 (TALENT boards). Preset main274 = TALENT 300 minus the 26 TabPFN-2/TabICLv2 development datasets (15 classification, 11 regression), i.e. 274 datasets: 173 classification with <= 10 classes (accuracy), 12 classification with > 10 classes (accuracy), 89 regression (RMSE); slices are never mixed except in the joint board. One fixed 64/16/20 split per dataset, 15 seeds (0-14) per method, no time limit, every method at its author-recommended default configuration (Mitra-v2 in its default deployment configuration: fine-tuned per its standard recipe with eight-fold bagging; > 10-class tasks via its hierarchical decomposition). Comparison pool: native TALENT baselines (boosted trees, RealMLP, ModernNCA, TabR, FT-Transformer, ...) plus TabPFN-3, TabICLv2, TabFM, EXAONE Tabular and Mitra-v2. Elo = Bradley-Terry fit over per-dataset pairwise comparisons, anchored at RandomForest = 1,000, 95% intervals from a 2,000-round bootstrap; rank = average rank. Rare failed cells imputed (KNN-5 within slice for classification, median for regression) and disclosed per method. Preset of this table: full300 (all 300 TALENT datasets, no exclusions), scored under the TRAIN + VAL context policy only. Rows marked * (TabPFN-3, TabICLv2) are not cleanly comparable: 26 of the 300 datasets are their development sets, the authors do not run those models on their own development data, so those 26 cells are imputed. The report treats main274 as the headline and full300 as a robustness check.",
+   "metric": "win_rate",
+   "higher_is_better": true,
+   "task_scope": "all",
+   "num_datasets": 300,
+   "results": {
+    "tabfm": 0.905,
+    "exaone-tabular": 0.902,
+    "mitra-v2": 0.891,
+    "tabpfn-3": 0.822,
+    "tabiclv2": 0.817,
+    "realmlp": 0.652,
+    "modernnca": 0.649,
+    "catboost": 0.64,
+    "lightgbm": 0.599,
+    "xgboost": 0.573
+   },
+   "results_note": {
+    "tabfm": "TabFM",
+    "mitra-v2": "Mitra-v2",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3* (26 development-set cells imputed)",
+    "tabiclv2": "TabICLv2* (26 development-set cells imputed)",
+    "modernnca": "ModernNCA",
+    "realmlp": "RealMLP",
+    "catboost": "CatBoost",
+    "lightgbm": "LightGBM",
+    "xgboost": "XGBoost"
+   },
+   "notes": "Win rate = average pairwise win rate against the rest of the pool (fraction, 0-1). Table 9, top 12 of the pool by Elo. Not in this comparison's list: TabR (Elo 1,150.1, rank 11.96, win rate 0.635) and FT-Transformer (1,065.7, 14.66, 0.545). Imputed cells out of 300: TabFM 12, EXAONE 0, Mitra-v2 0, TabPFN-3 26, TabICLv2 26, ModernNCA 6, others 0. 95% Elo intervals: TabFM +64/-58, EXAONE +55/-51, Mitra-v2 +69/-59, TabPFN-3 +50/-45, TabICLv2 +49/-45, RealMLP +41/-39, ModernNCA +39/-39, CatBoost +28/-27, LightGBM +28/-28, XGBoost +24/-25.",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-t5-elo-overall",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "all",
+   "num_datasets": 288,
+   "results": {
+    "limix-2": 1506,
+    "tabfm": 1471,
+    "exaone-tabular": 1393,
+    "tabpfn-3": 1363,
+    "tabiclv2": 1344,
+    "xiaomi-tabldm": 1341,
+    "tabdpt": 1272,
+    "mitra-v2": 1269,
+    "limix": 1227,
+    "catboost": 1094,
+    "realmlp": 1069,
+    "modernnca": 1055,
+    "xgboost": 999,
+    "lightgbm": 973,
+    "tabm": 953
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5, overall Elo (288 datasets). 95% CIs: LimiX-2 -32/+37, TabFM -28/+30, EXAONE -22/+23, TabPFN-3 -22/+26, TabICLv2 -22/+23, Xiaomi-TabLDM -20/+21, TabDPT -25/+24, Mitra-v2 -22/+24, LimiX-16M -21/+21, CatBoost -22/+23, RealMLP -23/+22, ModernNCA -26/+24, XGBoost -26/+24, LightGBM -30/+29, TabM -32/+29. Pairwise win rates of LimiX-2 (Figure 7) range from 57% vs TabFM to 96% vs TabM. Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": true
+  },
+  {
+   "id": "limix-2-report-t5-elo-classification",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "classification",
+   "num_datasets": 188,
+   "results": {
+    "limix-2": 1475,
+    "tabfm": 1449,
+    "exaone-tabular": 1358,
+    "tabpfn-3": 1331,
+    "tabiclv2": 1338,
+    "xiaomi-tabldm": 1303,
+    "tabdpt": 1279,
+    "mitra-v2": 1263,
+    "limix": 1210,
+    "catboost": 1094,
+    "realmlp": 1046,
+    "modernnca": 1053,
+    "xgboost": 1007,
+    "lightgbm": 978,
+    "tabm": 977
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5, classification Elo (120 binary + 68 multiclass datasets, accuracy). 95% CIs: LimiX-2 -35/+38, TabFM -34/+36, EXAONE -26/+25, TabPFN-3 -26/+27, TabICLv2 -27/+28, Xiaomi -22/+24, TabDPT -28/+31, Mitra-v2 -28/+30, LimiX-16M -23/+23, CatBoost -27/+26, RealMLP -27/+26, ModernNCA -29/+27, XGBoost -27/+27, LightGBM -38/+35, TabM -36/+33. Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-t5-elo-regression",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "regression",
+   "num_datasets": 100,
+   "results": {
+    "limix-2": 1584,
+    "tabfm": 1529,
+    "exaone-tabular": 1477,
+    "tabpfn-3": 1441,
+    "tabiclv2": 1365,
+    "xiaomi-tabldm": 1431,
+    "tabdpt": 1262,
+    "mitra-v2": 1287,
+    "limix": 1268,
+    "catboost": 1094,
+    "realmlp": 1115,
+    "modernnca": 1058,
+    "xgboost": 980,
+    "lightgbm": 964,
+    "tabm": 899
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5, regression Elo (100 datasets, RMSE). AutoGluon 1.6 (EX, 4h) is second on this scale at 1581. 95% CIs: LimiX-2 -71/+92, TabFM -53/+60, EXAONE -36/+44, TabPFN-3 -48/+55, TabICLv2 -33/+39, Xiaomi -37/+44, TabDPT -42/+46, Mitra-v2 -44/+46, LimiX-16M -42/+43, CatBoost -44/+37, RealMLP -42/+39, ModernNCA -51/+48, XGBoost -58/+49, LightGBM -58/+48, TabM -61/+53. Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-t5-elo-binary",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "binary",
+   "num_datasets": 120,
+   "results": {
+    "limix-2": 1455,
+    "tabfm": 1418,
+    "exaone-tabular": 1370,
+    "tabpfn-3": 1333,
+    "tabiclv2": 1338,
+    "xiaomi-tabldm": 1305,
+    "tabdpt": 1312,
+    "mitra-v2": 1267,
+    "limix": 1217,
+    "catboost": 1107,
+    "realmlp": 1023,
+    "modernnca": 1062,
+    "xgboost": 999,
+    "lightgbm": 977,
+    "tabm": 967
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5, binary classification Elo (120 datasets). 95% CIs: LimiX-2 -43/+51, TabFM -38/+46, EXAONE -31/+37, TabPFN-3 -31/+36, TabICLv2 -35/+39, Xiaomi -28/+30, TabDPT -35/+34, Mitra-v2 -31/+34, LimiX-16M -26/+28, CatBoost -32/+32, RealMLP -34/+30, ModernNCA -39/+33, XGBoost -32/+29, LightGBM -45/+41, TabM -47/+43. Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-t5-elo-multiclass",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "elo",
+   "higher_is_better": true,
+   "task_scope": "multiclass",
+   "num_datasets": 68,
+   "results": {
+    "limix-2": 1520,
+    "tabfm": 1517,
+    "exaone-tabular": 1342,
+    "tabpfn-3": 1331,
+    "tabiclv2": 1343,
+    "xiaomi-tabldm": 1301,
+    "tabdpt": 1224,
+    "mitra-v2": 1258,
+    "limix": 1198,
+    "catboost": 1073,
+    "realmlp": 1087,
+    "modernnca": 1039,
+    "xgboost": 1022,
+    "lightgbm": 979,
+    "tabm": 996
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5, multiclass classification Elo (68 datasets with <= 10 classes). 95% CIs: LimiX-2 -51/+63, TabFM -64/+78, EXAONE -37/+41, TabPFN-3 -42/+49, TabICLv2 -41/+51, Xiaomi -34/+40, TabDPT -51/+52, Mitra-v2 -48/+51, LimiX-16M -39/+39, CatBoost -51/+46, RealMLP -46/+43, ModernNCA -49/+44, XGBoost -53/+44, LightGBM -62/+59, TabM -56/+49. Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-t5-improvability",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "improvability_pct",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 288,
+   "results": {
+    "limix-2": 6.75,
+    "tabfm": 9.17,
+    "exaone-tabular": 14.74,
+    "tabpfn-3": 15.98,
+    "tabiclv2": 15.63,
+    "xiaomi-tabldm": 16.48,
+    "tabdpt": 19.47,
+    "mitra-v2": 17.72,
+    "limix": 20.52,
+    "catboost": 26.84,
+    "realmlp": 26.62,
+    "modernnca": 26.65,
+    "xgboost": 29.37,
+    "lightgbm": 29.8,
+    "tabm": 32.37
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5 'Improvability' column, in percent (average relative error gap to the best method per dataset; lower is better). Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-t5-win-count",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "win_count",
+   "higher_is_better": true,
+   "task_scope": "all",
+   "num_datasets": 288,
+   "results": {
+    "limix-2": 84.3,
+    "tabfm": 50.1,
+    "exaone-tabular": 12.9,
+    "tabpfn-3": 15.7,
+    "tabiclv2": 10.2,
+    "xiaomi-tabldm": 7.4,
+    "tabdpt": 11.2,
+    "mitra-v2": 7.4,
+    "limix": 6.1,
+    "catboost": 4.9,
+    "realmlp": 4.5,
+    "modernnca": 5.4,
+    "xgboost": 2.3,
+    "lightgbm": 2.6,
+    "tabm": 3.0
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)",
+    "tabfm": "TabFM",
+    "exaone-tabular": "EXAONE Tabular",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2",
+    "xiaomi-tabldm": "Xiaomi-TabLDM",
+    "tabdpt": "TabDPT",
+    "mitra-v2": "Mitra-v2",
+    "limix": "LimiX-16M (LimiX v1)",
+    "catboost": "CatBoost",
+    "realmlp": "RealMLP",
+    "modernnca": "ModernNCA",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "tabm": "TabM"
+   },
+   "notes": "Table 5 '#wins' column: aggregated win count over the 288 datasets (higher is better). Rows of Table 5 not in this comparison's model list: AutoGluon 1.6 (EX, 4h) (overall Elo 1438, cls 1379, reg 1581, binary 1340, multiclass 1465, improvability 11.21%, #wins 48.0), TabR (1075 / 1078 / 1071 / 1077 / 1080, 26.25%, 4.1), FT-Transformer (1032 / 1024 / 1048 / 1027 / 1018, 29.27%, 4.1), RandomForest (1000 anchor on every scale, 30.06%, 3.8).",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-fig6-avg-rank-binary",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "binary",
+   "num_datasets": 120,
+   "results": {
+    "limix-2": 4.62
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)"
+   },
+   "notes": "Figure 6 (average-rank comparison; accuracy for classification, RMSE for regression; 95% bootstrap CIs from 1000 dataset resamples): only LimiX-2's value is printed in the text ('lowest average rank in all three task categories, with ranks of 4.62, 3.91, and 3.88'); the other methods' ranks are in the figure only and are omitted.",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-fig6-avg-rank-multiclass",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "multiclass",
+   "num_datasets": 68,
+   "results": {
+    "limix-2": 3.91
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)"
+   },
+   "notes": "Figure 6 (average-rank comparison; accuracy for classification, RMSE for regression; 95% bootstrap CIs from 1000 dataset resamples): only LimiX-2's value is printed in the text ('lowest average rank in all three task categories, with ranks of 4.62, 3.91, and 3.88'); the other methods' ranks are in the figure only and are omitted.",
+   "headline": false
+  },
+  {
+   "id": "limix-2-report-fig6-avg-rank-regression",
+   "source_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17488",
+   "source_date": "2026-09",
+   "protocol": "LimiX-2 report, Section 5.3 / Table 5 and Figure 6. TALENT with the 12 classification datasets having more than 10 target classes excluded: 288 datasets = 120 binary + 68 multiclass + 100 regression. Official TALENT evaluation pipeline, official fixed 64%/16%/20% train/validation/test split, 15 random seeds per experiment. Models integrated in the TALENT library use their default configurations (including model-specific hyperparameters); EXAONE Tabular, Xiaomi-TabLDM and Mitra-v2 are run following the preprocessing and inference procedures of their official repositories without hyperparameter tuning; LimiX-2 in its default configuration. Per dataset, models are ranked by accuracy (classification) or RMSE (regression), per seed, ranks averaged across seeds then equally across datasets. Elo: per-dataset results converted to pairwise comparisons and fitted with a Bradley-Terry model (following TabArena) with Random Forest anchored at 1000; 95% CIs from 2000 bootstrap rounds (2.5%/97.5% quantiles). Improvability = relative error gap to the best method per dataset (lower is better); '#wins' = aggregated win count (one unit of credit per split to the best method, shared among ties, averaged within dataset, summed across datasets).",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "regression",
+   "num_datasets": 100,
+   "results": {
+    "limix-2": 3.88
+   },
+   "results_note": {
+    "limix-2": "LimiX-2 (default)"
+   },
+   "notes": "Figure 6 (average-rank comparison; accuracy for classification, RMSE for regression; 95% bootstrap CIs from 1000 dataset resamples): only LimiX-2's value is printed in the text ('lowest average rank in all three task categories, with ranks of 4.62, 3.91, and 3.88'); the other methods' ranks are in the figure only and are omitted.",
+   "headline": false
+  },
+  {
+   "id": "tabpfn-3.5-report-avg-rank-274-tabiclv2-protocol",
+   "source_title": "TabPFN-3.5: Technical Report (arXiv 2609.17895, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17895",
+   "source_date": "2026-09",
+   "protocol": "TabPFN-3.5 report, Appendix C.5 / Figure 19 ('TabICLv2 evaluation protocol'): the 300 base TALENT datasets minus the 26 used during the development of TabPFN-2 and TabICLv2 = 274 datasets, with the baselines the TabICLv2 authors ran; the same datasets and baselines as the main TALENT figure of the TabPFN-3 report, with TabPFN-3.5 added. Fixed 64/16/20 split; all methods ranked on each dataset; average rank with 95% bootstrap confidence interval over datasets; a method with no result on some datasets has those cells filled with the KNN baseline's score (hatched bars, counted in the label). TabPFN-3.5 (the default model; no other 3.5 family member was evaluated on TALENT). Number of seeds not stated.",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 274,
+   "results": {
+    "tabpfn-3.5": 2.95,
+    "tabpfn-3": 4.48,
+    "tabiclv2": 5.35
+   },
+   "results_note": {
+    "tabpfn-3.5": "TabPFN-3.5",
+    "tabpfn-3": "TabPFN-3",
+    "tabiclv2": "TabICLv2"
+   },
+   "notes": "Figure 19; only these three values are printed in the text ('TabPFN-3.5 ranks first with an average rank of 2.95, ahead of TabPFN-3 at 4.48 and TabICLv2 at 5.35'; CIs of TabPFN-3.5 and TabPFN-3 do not overlap). The figure also shows the TabICLv2 authors' baselines (RealTabPFN-2.5, TabPFN-2.5, LimiX, TabPFNv2, CatBoost, ...), whose ranks are not printed and are omitted. TabPFN-3.5-Fast was not evaluated on TALENT.",
+   "headline": true
+  },
+  {
+   "id": "tabpfn-3.5-report-avg-rank-337-all-with-extensions",
+   "source_title": "TabPFN-3.5: Technical Report (arXiv 2609.17895, 15 Sep 2026)",
+   "source_url": "https://arxiv.org/html/2609.17895",
+   "source_date": "2026-09",
+   "protocol": "TabPFN-3.5 report, Appendix C.5 / Figure 20: every TALENT dataset with published baselines and at most one million training rows, i.e. the 300 base datasets plus the large-data and high-dimensional extensions = 337 datasets; baselines are the results published by the TALENT authors (35 classical and deep tabular baselines; no other foundation model, since the TabICLv2 results do not cover the extensions and the TALENT tables list earlier TabPFN versions only on a small part of the datasets). Fixed 64/16/20 split; average rank with 95% bootstrap CI over datasets; missing cells filled with the KNN baseline's score. TabPFN-3.5 default; seeds not stated.",
+   "metric": "avg_rank",
+   "higher_is_better": false,
+   "task_scope": "all",
+   "num_datasets": 337,
+   "results": {
+    "tabpfn-3.5": 2.13,
+    "tabpfn-3": 3.2
+   },
+   "results_note": {
+    "tabpfn-3.5": "TabPFN-3.5",
+    "tabpfn-3": "TabPFN-3"
+   },
+   "notes": "Figure 20. Table 1 of the report summarises this view as TabPFN-3.5 ranked '1 of 37' (35 TALENT baselines + TabPFN-3 + TabPFN-3.5), with per-dataset win rates of 80% against TabICLv2 (best other TFM; its entry taken from the 274-dataset view) and 91% against CatBoost (best non-foundation model); one split per dataset.",
+   "headline": false
+  },
+  {
+   "id": "kumo-tabular-blog-avg-rank-classification-accuracy",
+   "metric": "avg_rank",
+   "task_scope": "classification",
+   "higher_is_better": false,
+   "num_datasets": null,
+   "results": {
+    "kumo-tabular": 6.67
+   },
+   "results_note": {
+    "kumo-tabular": "Kumo Tabular (size not stated; classification accuracy, 'top overall ranking')"
+   },
+   "headline": true,
+   "notes": "Average rank on classification accuracy across the TALENT classification datasets (the blog does not print the dataset count per task).",
+   "source_title": "NVIDIA Kumo Tabular blog (Hugging Face, 2026-09-29), Performance section",
+   "source_url": "https://huggingface.co/blog/nvidia/kumo-tabular",
+   "source_date": "2026-09",
+   "protocol": "NVIDIA's own run on the corrected 300-dataset TALENT benchmark using the official TALENT pipeline (fixed 64/16/20 splits), 15 seeds, default settings (16 estimators for Kumo Tabular-Large), compared against TALENT's published result tables for the other methods (benchmark/tabular/talent in the structured-data-models repo). The blog prints only Kumo Tabular's average ranks (size not stated in the text; presumably Large); the ranks of the other methods are shown in figures only."
+  },
+  {
+   "id": "kumo-tabular-blog-avg-rank-classification-logloss",
+   "metric": "avg_rank_logloss",
+   "task_scope": "classification",
+   "higher_is_better": false,
+   "num_datasets": null,
+   "results": {
+    "kumo-tabular": 3.98
+   },
+   "results_note": {
+    "kumo-tabular": "Kumo Tabular (size not stated; classification log-loss)"
+   },
+   "headline": false,
+   "notes": "Average rank on classification log-loss.",
+   "source_title": "NVIDIA Kumo Tabular blog (Hugging Face, 2026-09-29), Performance section",
+   "source_url": "https://huggingface.co/blog/nvidia/kumo-tabular",
+   "source_date": "2026-09",
+   "protocol": "NVIDIA's own run on the corrected 300-dataset TALENT benchmark using the official TALENT pipeline (fixed 64/16/20 splits), 15 seeds, default settings (16 estimators for Kumo Tabular-Large), compared against TALENT's published result tables for the other methods (benchmark/tabular/talent in the structured-data-models repo). The blog prints only Kumo Tabular's average ranks (size not stated in the text; presumably Large); the ranks of the other methods are shown in figures only."
+  },
+  {
+   "id": "kumo-tabular-blog-avg-rank-regression-rmse",
+   "metric": "avg_rank",
+   "task_scope": "regression",
+   "higher_is_better": false,
+   "num_datasets": null,
+   "results": {
+    "kumo-tabular": 4.22
+   },
+   "results_note": {
+    "kumo-tabular": "Kumo Tabular (size not stated; regression RMSE)"
+   },
+   "headline": false,
+   "notes": "Average rank on regression RMSE.",
+   "source_title": "NVIDIA Kumo Tabular blog (Hugging Face, 2026-09-29), Performance section",
+   "source_url": "https://huggingface.co/blog/nvidia/kumo-tabular",
+   "source_date": "2026-09",
+   "protocol": "NVIDIA's own run on the corrected 300-dataset TALENT benchmark using the official TALENT pipeline (fixed 64/16/20 splits), 15 seeds, default settings (16 estimators for Kumo Tabular-Large), compared against TALENT's published result tables for the other methods (benchmark/tabular/talent in the structured-data-models repo). The blog prints only Kumo Tabular's average ranks (size not stated in the text; presumably Large); the ranks of the other methods are shown in figures only."
+  }
+ ],
+ "per_model_summary": {
+  "limix-2": "LimiX-2 reports the top TALENT Elo in its own evaluation (LimiX-2 report, 288 datasets, 15 seeds): overall 1506 vs 1471 for TabFM, with the best Elo on classification (1475), regression (1584), binary (1455) and multiclass (1520), the lowest improvability (6.75%), the highest aggregated win count (84.3) and the lowest average rank in every task type (4.62 / 3.91 / 3.88). No other source evaluates LimiX-2 on TALENT.",
+  "tabpfn-3.5": "TabPFN-3.5 ranks first on TALENT in its own report: average rank 2.95 on the 274-dataset TabICLv2 protocol (TabPFN-3 4.48, TabICLv2 5.35) and 2.13 on all 337 datasets with <= 1M training rows incl. extensions (TabPFN-3 3.20; '1 of 37', 80% per-dataset win rate vs TabICLv2, 91% vs CatBoost). Not included in the LimiX-2, Mitra-v2, Xiaomi or EXAONE TALENT tables (all published before or around the same time).",
+  "tabpfn-3.5-fast": "Not evaluated on TALENT: the TabPFN-3.5 report states that on TALENT only TabPFN-3.5 itself was evaluated ('no other family member was evaluated'). No numbers in any source.",
+  "causilo": "No TALENT results: the Causilo technical report evaluates TabArena, BeyondArena and ScoringBench only, and Causilo does not appear in any other paper's TALENT table (LimiX-2 mentions Causilo only on TabArena).",
+  "tabfm": "TabFM (Google Research; no paper) is evaluated on TALENT only by third parties, where it is consistently in the leading group: best mean accuracy on 188 classification datasets (0.863) and second mean R^2 on regression (0.733) in the EXAONE report; best overall (4.23) and regression (3.72) average rank in the Xiaomi-TabLDM report; top Elo on the Mitra-v2 main274 boards (1,503.2 train-only / 1,527.7 train+val, statistically tied with Mitra-v2 and EXAONE); runner-up Elo 1471 in the LimiX-2 report. It cannot run the 12 > 10-class datasets.",
+  "mitra-v2": "Mitra-v2's own report (274 datasets, 15 seeds, Elo anchored at RandomForest = 1000) places it in the leading group with TabFM and EXAONE Tabular: Elo 1,479.7 (avg rank 4.39) with train-only context and 1,490.2 (4.35) with train+val context, first outright on the 12 many-class datasets (Elo 2,070.1 / 2,204.2) and highest train-only regression Elo (1,499.3). In the LimiX-2 report's pool it is much lower (overall Elo 1269, 9th of 19).",
+  "exaone-tabular": "EXAONE Tabular reports second-best mean accuracy on 188 TALENT classification datasets (0.857, vs 0.863 for TabFM) and the best mean R^2 on 100 regression datasets (0.736) in its own report (support set capped at 50k rows). Third parties: Mitra-v2 report Elo 1,451.8 train-only / 1,519.0 train+val (avg rank 4.83 / 3.94; statistically tied with TabFM and Mitra-v2), Xiaomi report avg rank 4.96 overall / 4.15 regression / 6.38 binary, LimiX-2 report overall Elo 1393 (4th, behind LimiX-2, TabFM and AutoGluon).",
+  "tabpfn-3": "The TabPFN-3 report says TabPFN-3 ranks first on TALENT (274-dataset TabICLv2 protocol, per task type, many-class and large-row slices) but prints no numbers. Printed numbers from other sources: avg rank 4.48 (274 datasets, TabPFN-3.5 report, behind TabPFN-3.5's 2.95) and 3.20 (337 datasets); mean accuracy 0.854 / mean R^2 0.728 (EXAONE report); avg rank 5.55 overall / 4.88 regression / 6.80 binary (Xiaomi report); Elo 1,414.8 train-only (rank 5.48) in the Mitra-v2 report; Elo 1363 in the LimiX-2 report.",
+  "xiaomi-tabldm": "Xiaomi-TabLDM's report (TabICLv2 protocol, KNN-imputed missing cells) gives it average rank 4.82 overall (2nd behind TabFM 4.23), 4.03 on 100 regression datasets (2nd behind TabFM 3.72) and 5.72 on binary classification (tied best with TabFM). In the LimiX-2 report it has overall Elo 1341 (7th of 19).",
+  "tabpfn-2.6": "Only the Xiaomi-TabLDM report includes TabPFN-2.6 on TALENT: average rank 6.79 overall and 6.33 on regression (last among the six named foundation models in that comparison). No other source reports it.",
+  "realtabpfn-2.5": "The TabPFN-2.5 / RealTabPFN-2.5 report itself contains no TALENT evaluation. In the TabICLv2 paper (274 datasets, 32 estimators) RealTabPFN-2.5 has average rank 5.11 overall (vs TabICLv2 4.66 and TabPFN-2.5 5.45), 4.82 on binary accuracy (best), 5.64 on multiclass accuracy, and is beaten by TabICLv2 on AUC/log-loss ranks; it also appears as a baseline bar in the TabPFN-3 / TabPFN-3.5 TALENT figures (no printed numbers).",
+  "tabiclv2": "TabICLv2's own paper reports the best average rank on TALENT (4.66 vs RealTabPFN-2.5 5.11, TabPFN-2.5 5.45, LimiX 8.34, TabPFNv2 8.82; 62% win rate vs RealTabPFN-2.5). Later third-party reports place it below the newest models: 5.35 (TabPFN-3.5 report, 274 datasets), 6.15 overall / 6.10 regression / 6.90 binary (Xiaomi report), Elo 1,399.6 (rank 5.76) train-only in the Mitra-v2 report, mean accuracy 0.854 / R^2 0.723 (EXAONE report), Elo 1344 (LimiX-2 report).",
+  "tabicl": "TabICL (v1.1 checkpoint) appears only in the TabICLv2 paper's binary-classification ranks (8.48 vs TabICLv2 4.98).",
+  "tabpfn-2.5": "TabPFN-2.5 (no real-data fine-tuning) appears in the TabICLv2 paper: average rank 5.45 overall, 5.28 binary accuracy, 4.43 regression MAE rank (better than TabICLv2's 4.63).",
+  "tabpfnv2": "TabPFNv2 appears in the TabICLv2 paper with overall average rank 8.82; it is also the only v2-generation foundation model in TALENT's own README figure (no printed number).",
+  "limix": "LimiX v1 appears in the TabICLv2 paper (avg rank 8.34 overall, 8.61 binary), the EXAONE report (mean accuracy 0.834, mean R^2 0.713) and, as LimiX-16M, in the LimiX-2 report (overall Elo 1227).",
+  "mitra": "Mitra v1 has no TALENT number in any of the sources (the Mitra-v2 report omits Mitra-v1 Elo values by design).",
+  "tabdpt": "TabDPT appears in the EXAONE report (mean accuracy 0.849, mean R^2 0.715) and the LimiX-2 report (overall Elo 1272).",
+  "catboost": "CatBoost: Mitra-v2 report Elo 1,153.2 (rank 11.89) train-only main274 and 1,155.4 (11.80) full300; LimiX-2 report overall Elo 1094 (best tree/neural baseline there); TabPFN-3.5 wins 91% of 337 datasets against it.",
+  "xgboost": "XGBoost: Mitra-v2 report Elo 1,091.9 (rank 13.83); LimiX-2 report overall Elo 999; rank 14.60 on TALENT datasets > 10K samples in the TabICLv2 paper's stage ablation.",
+  "lightgbm": "LightGBM: Mitra-v2 report Elo 1,115.9 (rank 13.06); LimiX-2 report overall Elo 973.",
+  "realmlp": "RealMLP: Mitra-v2 report Elo 1,166.1 (rank 11.50); LimiX-2 report overall Elo 1069.",
+  "tabm": "TabM: LimiX-2 report overall Elo 953 (lowest of the listed methods there); not in the other TALENT tables.",
+  "modernnca": "ModernNCA: Mitra-v2 report Elo 1,166.9 (rank 11.48; best classical baseline there); LimiX-2 report overall Elo 1055.",
+  "kumo-tabular": "Only NVIDIA's own blog reports TALENT numbers for Kumo Tabular (2026-09-29): 'top overall ranking' on the corrected 300-dataset TALENT benchmark (official pipeline, 15 seeds) with average ranks 6.67 on classification accuracy, 3.98 on classification log-loss and 4.22 on regression RMSE; the size is not stated in the text and no third-party TALENT evaluation exists yet."
+ },
+ "sources": [
+  {
+   "title": "TALENT GitHub repository (LAMDA-Tabular/TALENT): readme, results/*.md, configs",
+   "url": "https://github.com/LAMDA-Tabular/TALENT"
+  },
+  {
+   "title": "TALENT-Results: official per-dataset results page",
+   "url": "https://6sy666.github.io/TALENT-Results/"
+  },
+  {
+   "title": "TALENT-Configs: official hyperparameter configs page",
+   "url": "https://6sy666.github.io/TALENT-Configs/"
+  },
+  {
+   "title": "A Closer Look at Deep Learning Methods on Tabular Datasets (TALENT benchmark paper, v4 Nov 2025)",
+   "url": "https://arxiv.org/abs/2407.00956"
+  },
+  {
+   "title": "TALENT: A Tabular Analytics and Learning Toolbox",
+   "url": "https://arxiv.org/abs/2407.04057"
+  },
+  {
+   "title": "TabICLv2: A better, faster, scalable, and open tabular foundation model (arXiv 2602.11139, v2 16 Sep 2026; v1 Feb 2026)",
+   "url": "https://arxiv.org/html/2602.11139"
+  },
+  {
+   "title": "TabPFN-3: Technical Report (arXiv 2605.13986, v2 28 May 2026)",
+   "url": "https://arxiv.org/html/2605.13986"
+  },
+  {
+   "title": "EXAONE Tabular 1.0: Technical Report (arXiv 2608.25774, 26 Aug 2026)",
+   "url": "https://arxiv.org/html/2608.25774"
+  },
+  {
+   "title": "Xiaomi-TabLDM: A Tabular Foundation Model Technical Report (arXiv 2609.03880, v2 4 Sep 2026)",
+   "url": "https://arxiv.org/html/2609.03880"
+  },
+  {
+   "title": "Mitra-v2 Technical Report (arXiv 2609.04540v1, 3 Sep 2026)",
+   "url": "https://arxiv.org/html/2609.04540v1"
+  },
+  {
+   "title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, 15 Sep 2026)",
+   "url": "https://arxiv.org/html/2609.17488"
+  },
+  {
+   "title": "TabPFN-3.5: Technical Report (arXiv 2609.17895, 15 Sep 2026)",
+   "url": "https://arxiv.org/html/2609.17895"
+  },
+  {
+   "title": "Causilo Technical Report (arXiv 2609.22866, 19 Sep 2026) - no TALENT evaluation",
+   "url": "https://arxiv.org/html/2609.22866"
+  },
+  {
+   "title": "TabPFN-2.5: Advancing the State of the Art in Tabular Foundation Models (arXiv 2511.08667, v2 Feb 2026) - no TALENT evaluation",
+   "url": "https://arxiv.org/html/2511.08667"
+  },
+  {
+   "title": "TabFM GitHub repository (google-research/tabfm) - no paper; TabArena result files only",
+   "url": "https://github.com/google-research/tabfm"
+  },
+  {
+   "title": "NVIDIA Kumo Tabular blog (Hugging Face, 2026-09-29), Performance section",
+   "url": "https://huggingface.co/blog/nvidia/kumo-tabular"
+  }
+ ]
+}

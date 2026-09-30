@@ -1,0 +1,144 @@
+{
+  "id": "kumo-tabular",
+  "name": "Kumo Tabular",
+  "tabarena_entry": "Kumo-Tabular (default)",
+  "family": "Kumo Tabular (NVIDIA Kumo Structured collection; TabICLv2 lineage)",
+  "developer": "NVIDIA (Jingang Qu, Valter Hudovernik, Martin Jurkovic, Cedric Lorenz, Akihiro Nitta, Dmitry Gordeev, Federico Lopez, Ramona Bendias, Gilberto Titericz Jr, Aleksandar S. Sokolovski, Isabel Hulseman, Jure Leskovec, Matthias Fey; former Kumo.ai team, with David Holzmüller acknowledged for ideas and ablations)",
+  "organization_type": "company",
+  "release_date": "2026-09-29",
+  "paper_title": "NVIDIA Kumo Tabular Sets a New Accuracy-Efficiency Frontier for Tabular Prediction (Hugging Face blog post; no paper or technical report as of 2026-09-30)",
+  "links": {
+    "paper": "https://huggingface.co/blog/nvidia/kumo-tabular",
+    "code": "https://github.com/NVIDIA/structured-data-models",
+    "weights": "https://huggingface.co/nvidia/Kumo-Tabular",
+    "docs": "https://nvidia.github.io/structured-data-models/",
+    "pypi": "https://pypi.org/project/structured-data-models/",
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/625"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": false,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights (v1.0.0, Hub commit bd7fa122; one classifier and one regressor checkpoint per size: large/medium/small) are public on Hugging Face without gating. Inference runs through NVIDIA's open-source structured-data-models library (Python >= 3.11, PyTorch >= 2.7; GPU strongly recommended, CPU works). As of 2026-09-30 PyPI only holds a placeholder release, so TabArena installs the library from a git pin. The blog states 'Our training recipe and artificial data generators will be released soon' (not available yet). No hosted API; a related NVIDIA NIM exists only for the sibling Kumo Relational model."
+  },
+  "license": {
+    "code": "Apache-2.0 (structured-data-models; NVIDIA-authored code). Bundled third-party code: TabICLv2 (BSD-3-Clause), TabFM / TimesFM (Apache-2.0), TabPFN-extensions ECOC (Apache-2.0)",
+    "weights": "OpenMDW License Agreement v1.1 (OpenMDW-1.1; Linux Foundation / PyTorch Foundation model license) — permissive, commercial use allowed",
+    "prior_or_data": "not released yet (training recipe and artificial-data generators announced as 'coming soon'); no license stated",
+    "commercial_use": "yes",
+    "non_commercial_use": "yes",
+    "notes": "OpenMDW-1.1 grants permission 'free of charge, to deal in the Model Materials without restriction, including under all copyright, patent, database, and trade secret rights'. Obligations: when distributing any portion of the Model Materials, retain a copy of the agreement and all copyright / origin notices. Rights terminate if the licensee files or joins a patent or copyright lawsuit claiming the Model Materials infringe (unless in response to a suit first brought against them). The license imposes no restrictions or obligations on outputs. Provided 'as is', no warranty; the licensee is responsible for clearing third-party rights. Hugging Face metadata: license: openmdw-1.1. NVIDIA's blog adds its Trustworthy-AI guidance (validate for the use case; report concerns) but no additional contractual restriction. TabArena PR #625 is expected to flag the model as commercial-use permitted."
+  },
+  "architecture": {
+    "type": "column/row interleaved encoder + in-context-learning transformer (TabICLv2 lineage, with TabFM-style Fourier cell embedding)",
+    "parameters_m": 215.0,
+    "parameters_note": "Large ≈ 215 M (blog: 'three sizes (28M to 215M parameters)'; checkpoint sizes 854.9 MB classifier / 862.9 MB regressor ≈ 213.7 M / 215.7 M fp32 parameters). Medium ≈ 62 M (246.1 / 250.1 MB ≈ 61.5 M / 62.5 M). Small ≈ 28 M (109.9 / 114.0 MB ≈ 27.5 M / 28.5 M). Exact per-size counts are not published; the estimates come from the .pt file sizes on the Hub.",
+    "layers": "Large/Medium: 6 encoder stages (each an induced column block + a row block) + 24 ICL layers; Small: 4 encoder stages + 12 ICL layers (from MODEL_KWARGS in sdm/models/kumo/tabular/model.py)",
+    "embedding_dim": "cell/row channels 256 (Large, Medium) or 128 (Small); ICL transformer 1024 (Large) or 512 (Medium, Small) = 4 readout tokens × cell channels, concatenated without projection",
+    "attention_heads": "4 heads in the encoder stages; 16 ICL heads (Large) or 8 (Medium, Small); Test-GQA uses 2 key/value heads for query rows in Medium and Large (none in Small)",
+    "attention_scheme": "Encoder: column-wise induced set attention over the rows of each feature group (128 inducing points Small / 256 Medium & Large; context and query cells attend only to context-row keys and values, so cost is linear in rows) interleaved with row-wise attention across a row's feature-group tokens plus 4 learnable readout tokens (rotary positions, theta 100k, to tell columns apart; gated log-scale query scaling). ICL stage: context rows attend to each other, query rows attend to context rows only (each prediction depends only on the context and the row itself), with query-only grouped-query attention ('Test-GQA', 2 KV heads) that shrinks the cache every prediction reads and a reusable context KV cache. All attention blocks use RMSNorm QK-normalisation and a 'length-aware attention temperature': every query is scaled by a temperature growing with log(number of keys), with a coefficient learned per head (LogScale), so attention stays sharp on tables far longer or wider than training tables.",
+    "checkpoints": "separate classification and regression checkpoints per size (3 sizes × 2 tasks); library default size = large",
+    "regression_head": "distributional: 999 quantiles (q001…q999) via pinball/quantile loss; point prediction = mean over quantiles (after sorting and 20 %-trimmed averaging across estimators); classification head: 10-way class logits (MLP head with GELU, 2× hidden width)",
+    "feature_embedding": "Cells are grouped 3 columns per token; numerical and categorical values pass through Fourier features (sines and cosines of 32 learned frequencies) with separate weights per type; missing values are mean-imputed inside the model and flagged through a learned missingness projection (no user-side imputation); every context token also receives a label embedding (class embedding or linear map of the standardised target)",
+    "key_innovations": [
+      "Length-aware attention temperature: per-head learned log-scale query scaling so softmax attention stays sharp when inference tables are much larger than training tables",
+      "Test-GQA: query rows use grouped-query attention with 2 KV heads (Medium/Large) and the context KV cache is computed once and reused for follow-up predictions",
+      "Interleaved column/row encoder stages (4 or 6) instead of TabICLv2's 3 column + 3 row blocks, with TabFM-style Fourier cell embeddings and a learned missingness channel",
+      "Artificial-data generator with built-in real-world imperfections (missingness patterns, coarsened features that make duplicate rows disagree, many-level categoricals, heavy-tailed regression targets) and a tree-ensemble learnability filter",
+      "Three sizes (≈28 M / 62 M / 215 M) trained on 35 / 71 / 137 million artificial tables, forming an accuracy–efficiency Pareto front; released under a permissive license (OpenMDW-1.1)"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 10,
+    "max_classes_note": "A single forward pass covers up to 10 classes (classification head is 10-wide); the library extends to any number of classes with error-correcting output codes (ECOC, max_classes=10 per sub-problem; code derived from TabPFN-extensions).",
+    "max_features": 500,
+    "max_features_note": "No hard limit in the model; the default preprocessing recipe keeps at most 500 columns per estimator (SelectColumns(500) after a Latin-square column shuffle, so different estimators see different subsets). Pretraining used up to 100 columns; the blog warns accuracy may degrade 'on tables far beyond the training ranges'.",
+    "max_samples": null,
+    "max_samples_note": "No hard limit: by default the whole training set is the context (TabArena adapter max_context_size=None; optional --max_context_size subsamples the context into num_estimators chunks). Pretraining contexts reach 60,000 rows (stage 3); column attention is linear in rows, the ICL stage quadratic in context rows. Memory is the practical limit (fp16 autocast on CUDA; estimator batching falls back to one estimator at a time above 3,000 rows or 50,000 cells).",
+    "missing_values": "native",
+    "categorical_features": "numerical and categorical columns only; categoricals are aligned, count-encoded (category counts added for cardinality >= 50) and converted to numbers by the recipe, then embedded with separate categorical Fourier weights. Text, images or timestamps must be turned into features with the library's pre-processing recipes (an examples/tabular/text.py example exists).",
+    "text_features": false,
+    "other": "Quantile/uncertainty outputs for regression (999 quantiles); reusable context KV cache (fit once, predict repeatedly); CPU inference supported; fine-tuning example provided (examples/tabular/finetune.py: full fine-tuning of the small model with AdamW, lr 1e-5, cross-entropy or pinball loss). No multi-target and no relational-table support (the sibling Kumo Relational model covers relational data)."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Every training table is sampled from a Structural Causal Model in six steps: (1) draw a whole-table configuration (size, task, mechanisms, missingness); (2) sample a random causal graph over hidden variables; (3) evaluate it root-to-leaf with randomly drawn functions at every node (linear maps, small neural networks, trees, Gaussian processes); (4) turn some nodes into numerical or categorical columns, one into the target, keep the rest hidden (unmeasured causes); (5) post-process: correlate groups of columns, clip outliers, inject missing values; (6) a quick tree-ensemble check discards tables without learnable signal. The generator is a procedural sampler (not a trained model), so it yields an endless supply of tables. Real-world imperfections are built in on purpose: several missingness patterns, coarsened features so duplicate rows may disagree on their label, categorical columns with many levels, heavy-tailed regression targets. Contexts are the labelled majority of rows, the model predicts the remaining rows.",
+    "synthetic_prior_types": ["SCM (random causal DAG over hidden variables)", "linear maps", "small neural networks", "trees", "Gaussian processes", "post-processing: column correlation, outlier clipping, missingness injection, coarsening, many-level categoricals, heavy-tailed targets", "tree-ensemble learnability filter"],
+    "num_synthetic_datasets": 137000000,
+    "num_synthetic_datasets_note": "137 million artificial tables for Large; 71 million for Medium; 35 million for Small ('In total, Kumo Tabular-Small/Medium/Large saw about 35/71/137 million artificial tables').",
+    "real_data": "none (pretrained entirely on artificial tables)",
+    "objective": "cross-entropy for classification; quantile (pinball) loss over 999 fixed quantile levels for regression; classification and regression trained as separate models",
+    "optimizer": "not stated",
+    "training_steps": "not stated (only the number of tables seen per size)",
+    "batch_size": "not stated",
+    "hardware": "not stated",
+    "compute": "not stated",
+    "training_cost_note": "No GPU type, GPU-hours or cost are published; the blog promises the training recipe 'soon'.",
+    "curriculum": "Three stages as in TabICLv2: stage 1 (longest) tables of 1,024 rows and up to 100 columns; stage 2 varies the context from 400 to 10,240 rows; stage 3 extends the context to 60,000 rows, still with up to 100 columns."
+  },
+  "icl": {
+    "max_context_rows": null,
+    "context_note": "No fixed window: the entire training table is the context by default. Pretrained on contexts up to 60,000 rows; the length-aware attention temperature is designed to keep attention sharp beyond the training range. Context keys/values can be cached once (fit) and reused for follow-up predictions; query rows are processed in batches.",
+    "large_dataset_strategy": "Full context by default; optional context subsampling (max_context_size) that gives each of the num_estimators members a random chunk; per-estimator column subsets of at most 500 columns (max_columns override); estimator batching heuristics and fp16 autocast to fit GPU memory; optional KV cache for repeated prediction.",
+    "test_time_ensembling": "Ensemble of preprocessing members: 16 estimators by default for Large in NVIDIA's TabArena/TALENT adapters (8 for Medium and Small; the model-card example uses num_estimators=8). Members differ by a round-robin choice of numerical transform (identity, power transform, robust scaling + soft clipping, rank-Gaussian), Latin-square column shuffling, categorical level shifts and random target sign flips; class probabilities are averaged before a softmax, regression quantiles are sorted and averaged with a 20 % trimmed mean.",
+    "fine_tuning": "Supported by the library: examples/tabular/finetune.py does full fine-tuning (AdamW, lr 1e-5, context 256 / query 128 rows per step) of the small model or TabICLv2 with the model's own losses; not used for any reported benchmark number.",
+    "inference_notes": "Predictions are made in a single forward pass per estimator; each query's prediction depends only on the context and the query row, not on the other queries in the batch. More than 10 classes are handled with error-correcting output codes. Runs under torch.autocast float16 on CUDA in the benchmark adapters."
+  },
+  "speed": {
+    "hardware_note": "NVIDIA's TabArena run used a uniform single RTX 6000 Pro setup for all methods; the TabArena maintainers re-run on RTX PRO 6000 (96 GB) spot workers.",
+    "memory_note": "Not stated. Test-GQA (2 KV heads for queries) and the context KV cache are described as shrinking the per-prediction memory; the adapter batches estimators only while context+query rows <= 3,000 and cells <= 50,000, otherwise one estimator at a time.",
+    "speed_claims": "'ranks first overall with an ELO of 1950 while running 17× faster than LimiX-2 under a uniform single RTX 6000 Pro evaluation setup'; all three sizes are claimed to define the accuracy-efficiency Pareto front on TabArena (per-size timings only shown in the blog figure). No absolute seconds-per-1K-rows figures are published; official TabArena timings will follow once PR #625 is merged.",
+    "inference_cost_note": "Free local inference; no hosted API or pricing."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": true,
+      "source": "NVIDIA Kumo Tabular blog (2026-09-29), Performance section; protocol from benchmark/tabular/talent in the structured-data-models repo",
+      "protocol_note": "Corrected 300-dataset TALENT benchmark, official TALENT pipeline (fixed 64/16/20 splits), 15 seeds, default settings (16 estimators for Large), compared against TALENT's published result tables for the other methods; metrics: classification accuracy, classification log-loss, regression RMSE. The blog does not state which size the ranks refer to (presumably Large).",
+      "avg_rank": 6.67,
+      "elo": null,
+      "win_rate_vs": null,
+      "other": "Average rank 6.67 on classification accuracy, 3.98 on classification log-loss, 4.22 on regression RMSE — 'top overall ranking' on all three."
+    },
+    "other": [
+      {"name": "TabArena (authors' run, provisional)", "value": "Elo 1950, first overall, '17× faster than LimiX-2'; all three sizes run with default settings against the full leaderboard on a single RTX 6000 Pro", "source": "https://huggingface.co/blog/nvidia/kumo-tabular"},
+      {"name": "BeyondArena (authors' run)", "value": "Elo 1418, Improvability 7.78 %, first on the leaderboard", "source": "https://huggingface.co/blog/nvidia/kumo-tabular"},
+      {"name": "ScoringBench (authors' run)", "value": "Kumo Tabular-Large and Medium rank first and second on average rank (predictive-distribution benchmark; 5-fold CV protocol owned by ScoringBench)", "source": "https://huggingface.co/blog/nvidia/kumo-tabular"}
+    ]
+  },
+  "differences_vs_predecessor": "Kumo Tabular is the successor of TabICLv2 by the same lead author (Jingang Qu, now at NVIDIA) and reuses its recipe: column-then-row embedding, ICL transformer, three-stage curriculum, separate classification/regression checkpoints, 999-quantile regression head, Muon-era training tricks are not disclosed. Changes: (1) interleaved column/row encoder stages (4–6) instead of 3 + 3 fixed blocks; (2) TabFM-style Fourier cell embeddings (32 learned frequencies, separate numerical/categorical weights) plus a learned missingness channel instead of TabICLv2's feature embedding; (3) length-aware attention temperature (learned per-head log-scale query scaling) replacing TabICLv2's QASSMax as the mechanism for long contexts; (4) Test-GQA and a reusable context KV cache for cheaper repeated prediction; (5) three model sizes (≈28 M, 62 M, 215 M vs ≈28 M for TabICLv2) trained on 35–137 M tables (vs ≈35 M) with a richer generator (more imperfections); (6) 16 default estimators for Large (TabICLv2: 8); (7) license OpenMDW-1.1 (TabICLv2: BSD-3-Clause); the generator and training code are not yet public (TabICLv2's are).",
+  "sources": [
+    {"title": "NVIDIA Kumo Tabular Sets a New Accuracy-Efficiency Frontier for Tabular Prediction (Hugging Face blog, 2026-09-29)", "url": "https://huggingface.co/blog/nvidia/kumo-tabular"},
+    {"title": "nvidia/Kumo-Tabular model card and repository (license openmdw-1.1; large/medium/small checkpoints)", "url": "https://huggingface.co/nvidia/Kumo-Tabular"},
+    {"title": "OpenMDW License Agreement v1.1 (LICENSE file in the weights repo)", "url": "https://huggingface.co/nvidia/Kumo-Tabular/blob/main/LICENSE"},
+    {"title": "OpenMDW license homepage (Linux Foundation)", "url": "https://openmdw.ai/"},
+    {"title": "NVIDIA/structured-data-models (code, Apache-2.0; KumoTabular implementation and benchmark adapters)", "url": "https://github.com/NVIDIA/structured-data-models"},
+    {"title": "sdm/models/kumo/tabular/model.py — size configurations (MODEL_KWARGS)", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/sdm/models/kumo/tabular/model.py"},
+    {"title": "sdm/models/kumo/tabular/recipe.py — default preprocessing / ensembling recipe (500-column cap)", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/sdm/models/kumo/tabular/recipe.py"},
+    {"title": "sdm/models/kumo/tabular/icl.py and row_embedding.py — LogScale attention temperature, Test-GQA, KV cache, induced column attention, RoPE row attention", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/sdm/models/kumo/tabular/icl.py"},
+    {"title": "benchmark/tabular/model.py — TabArena/BeyondArena adapter (16 estimators Large, 8 Medium/Small, fp16 autocast, context subsampling options)", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/benchmark/tabular/model.py"},
+    {"title": "benchmark/tabular/talent/README.md and main.py — TALENT protocol (300 datasets, 15 seeds)", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/benchmark/tabular/talent/README.md"},
+    {"title": "examples/tabular/finetune.py — full fine-tuning example", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/examples/tabular/finetune.py"},
+    {"title": "KumoTabular API documentation", "url": "https://nvidia.github.io/structured-data-models/api/generated/sdm.models.KumoTabular.html"},
+    {"title": "THIRD_PARTY_LICENSES.md and pyproject.toml (code license Apache-2.0)", "url": "https://github.com/NVIDIA/structured-data-models/blob/main/THIRD_PARTY_LICENSES.md"},
+    {"title": "TabArena PR #625 'Add Kumo Tabular (large, medium, small)' (open; maintainer runs in progress)", "url": "https://github.com/autogluon/tabarena/pull/625"},
+    {"title": "LinkedIn announcement by Jingang Qu (2026-09-29)", "url": "https://www.linkedin.com/feed/update/urn:li:activity:7510810152330244097/"}
+  ],
+  "notes": "Status on 2026-09-30: released one day earlier; NOT on the official TabArena leaderboard (v0.1.9.3) yet — TabArena PR #625 by the maintainers is open, with runs of all three sizes on RTX PRO 6000 workers in progress and NVIDIA sign-off pending, so the TabArena numbers shown here are the authors' own (provisional, marked †). The blog's single Elo (1950) is not attributed to a size in the text; this record describes the Large model (library default, ≈215 M parameters, 16 estimators). Medium (≈62 M) and Small (≈28 M) will appear as separate leaderboard rows ('Kumo-Tabular-Medium (default)', 'Kumo-Tabular-Small (default)') and can be added as their own records once official numbers exist. No paper or technical report exists; the optimizer, steps, batch size, hardware and compute of pretraining are undisclosed, and the generator/training code is announced but unreleased. Parameter counts are estimated from checkpoint file sizes (fp32).",
+  "tabarena_self_reported": {
+    "status": "Not on the official TabArena leaderboard as of 2026-09-30 (TabArena-v0.1.9.3): TabArena PR #625 'Add Kumo Tabular (large, medium, small)' opened 2026-09-28 is open; maintainer runs on RTX PRO 6000 (96 GB) workers are in progress and the usage interface / NVIDIA sign-off are pending.",
+    "source_title": "NVIDIA Kumo Tabular blog (Hugging Face)",
+    "source_url": "https://huggingface.co/blog/nvidia/kumo-tabular",
+    "date": "2026-09-29",
+    "elo": 1950,
+    "elo_note": "Authors' own run of all three sizes with default settings against the full TabArena leaderboard (v0.1.9.x field, September 2026) under a uniform single RTX 6000 Pro setup; the text gives one Elo (1950, 'first overall', '17× faster than LimiX-2') without naming the size — presumably Large; per-size Elo and timings appear only in the blog's Pareto figure.",
+    "train_time_s_per_1k": null,
+    "predict_time_s_per_1k": null,
+    "hardware": "single NVIDIA RTX 6000 Pro (authors' uniform evaluation setup)",
+    "subsets": {}
+  }
+}

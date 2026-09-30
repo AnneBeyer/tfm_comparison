@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TFM Comparison · models at or above TabICLv2 on TabArena</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f2f1ec; --surface-3: #e9e8e2;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10); --shadow: rgba(11,11,11,0.08);
+    --accent: #2a78d6; --accent-soft: #cde2fb; --series-2: #eb6834; --series-3: #1baf7a;
+    --good: #006300; --bad: #d03b3b; --warn: #b26b00;
+    --seq-100:#cde2fb; --seq-150:#b7d3f6; --seq-200:#9ec5f4; --seq-250:#86b6ef; --seq-300:#6da7ec; --seq-350:#5598e7;
+    --seq-400:#3987e5; --seq-450:#2a78d6; --seq-500:#256abf; --seq-550:#1c5cab; --seq-600:#184f95; --seq-650:#104281; --seq-700:#0d366b;
+    --radius: 8px; --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232322; --surface-3: #2c2c2a;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+      --border: rgba(255,255,255,0.10); --shadow: rgba(0,0,0,0.5);
+      --accent: #3987e5; --accent-soft: #184f95; --series-2: #d95926; --series-3: #199e70;
+      --good: #0ca30c; --bad: #e66767; --warn: #fab219;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232322; --surface-3: #2c2c2a;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: rgba(255,255,255,0.10); --shadow: rgba(0,0,0,0.5);
+    --accent: #3987e5; --accent-soft: #184f95; --series-2: #d95926; --series-3: #199e70;
+    --good: #0ca30c; --bad: #e66767; --warn: #fab219;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  h1 { font-size: 24px; margin: 0 0 4px; font-weight: 650; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; margin: 32px 0 8px; font-weight: 650; }
+  h3 { font-size: 15px; margin: 16px 0 6px; font-weight: 650; }
+  p { margin: 0 0 8px; } .muted { color: var(--muted); } .ink2 { color: var(--ink-2); }
+  code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  .wrap { max-width: 1600px; margin: 0 auto; padding: 24px 24px 64px; }
+  header.top { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+  header.top .sub { color: var(--ink-2); max-width: 900px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+  .pill.ok { color: var(--good); } .pill.no { color: var(--bad); } .pill.warn { color: var(--warn); }
+  button, select, input[type="search"] { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; }
+  button { cursor: pointer; } button:hover { background: var(--surface-2); } button.active { background: var(--accent-soft); border-color: var(--accent); }
+  button.small { padding: 2px 8px; font-size: 12px; }
+  label.chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; white-space: nowrap; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; position: relative; }
+  .controls .sep { width: 1px; height: 22px; background: var(--grid); }
+  .groups { display: flex; flex-wrap: wrap; gap: 6px; }
+  .popover { position: absolute; top: calc(100% + 6px); left: 12px; z-index: 20; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px var(--shadow); padding: 12px 16px; max-height: 60vh; overflow: auto; columns: 3; column-gap: 24px; min-width: 720px; }
+  .popover h4 { margin: 6px 0 4px; font-size: 13px; break-after: avoid; }
+  .popover label { display: block; font-size: 13px; padding: 1px 0; break-inside: avoid; }
+  .popover[hidden] { display: none; }
+  .tablewrap { overflow: auto; max-height: 78vh; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  table.cmp { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-variant-numeric: tabular-nums; }
+  table.cmp th, table.cmp td { padding: 6px 10px; border-bottom: 1px solid var(--grid); border-right: 1px solid var(--grid); vertical-align: top; text-align: left; }
+  table.cmp thead th { position: sticky; background: var(--surface-2); z-index: 3; font-weight: 600; }
+  table.cmp thead tr.gh th { top: 0; height: 30px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); border-bottom: 1px solid var(--axis); text-align: center; }
+  table.cmp thead tr.ch th { top: 30px; white-space: nowrap; cursor: pointer; user-select: none; }
+  table.cmp thead tr.ch th:hover { background: var(--surface-3); }
+  table.cmp thead tr.ch th .arrow { color: var(--accent); margin-left: 4px; font-size: 11px; }
+  table.cmp th.stick, table.cmp td.stick { position: sticky; left: 0; z-index: 2; background: var(--surface); box-shadow: 1px 0 0 var(--axis); }
+  table.cmp thead th.stick { z-index: 4; background: var(--surface-2); }
+  table.cmp tbody tr:hover td { background: var(--surface-2); }
+  table.cmp td.num { text-align: right; white-space: nowrap; }
+  table.cmp td.txt { max-width: 280px; }
+  .compact td.txt .t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .full td.txt { max-width: 420px; }
+  .name { font-weight: 650; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+  .name .chev { display: inline-block; width: 16px; color: var(--muted); transition: transform .15s; }
+  tr.open .name .chev { transform: rotate(90deg); }
+  .name .pos { color: var(--muted); font-weight: 500; font-size: 12px; min-width: 1.6em; }
+  .note { color: var(--muted); font-size: 11.5px; }
+  .ci { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  td.prov, .prov { font-style: italic; } .dag { color: var(--warn); font-weight: 600; margin-left: 2px; cursor: help; }
+  .info { display: inline-block; border: 1px solid var(--axis); border-radius: 999px; color: var(--ink-2); font-size: 10px; width: 14px; height: 14px; line-height: 12px; text-align: center; margin-left: 4px; cursor: help; vertical-align: 1px; }
+  tr.details td { background: var(--surface-2); padding: 14px 18px 18px; border-bottom: 2px solid var(--axis); }
+  .dinner { position: sticky; left: 18px; }
+  .dgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px 28px; }
+  .dsec h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); border-bottom: 1px solid var(--grid); padding-bottom: 3px; }
+  .dsec dl { margin: 0; display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: 3px 10px; font-size: 13px; }
+  .dsec dt { color: var(--ink-2); } .dsec dd { margin: 0; overflow-wrap: anywhere; }
+  .dsec ul { margin: 0; padding-left: 18px; } .dsec li { margin: 0 0 2px; }
+  .dsec table { border-collapse: collapse; font-size: 12.5px; } .dsec table td, .dsec table th { padding: 2px 8px; border-bottom: 1px solid var(--grid); text-align: left; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+  figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px 12px; }
+  figure figcaption { font-weight: 650; margin-bottom: 4px; } figure .fnote { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  svg text { font-family: var(--font); fill: var(--ink-2); font-size: 11px; }
+  svg .gridline { stroke: var(--grid); stroke-width: 1; } svg .axisline { stroke: var(--axis); stroke-width: 1; }
+  svg .pt { stroke: var(--surface); stroke-width: 2; } svg .pt.comm { fill: var(--accent); } svg .pt.nc { fill: var(--series-2); }
+  svg .lbl { fill: var(--ink); font-size: 11px; } svg .hit { fill: transparent; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin: 4px 0 8px; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 6px 20px var(--shadow); border-radius: 6px; padding: 8px 10px; font-size: 12px; z-index: 50; max-width: 320px; }
+  .tip[hidden] { display: none; } .tip b { font-size: 13px; }
+  table.heat { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  table.heat th { font-weight: 600; color: var(--ink-2); padding: 3px 6px; text-align: left; white-space: nowrap; font-size: 12px; }
+  table.heat th.col { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; vertical-align: bottom; height: 130px; }
+  table.heat td { padding: 4px 8px; text-align: right; border-radius: 3px; min-width: 52px; }
+  table.heat td.empty { background: var(--surface-2); color: var(--muted); text-align: center; }
+  table.simple { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  table.simple th, table.simple td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: left; vertical-align: top; }
+  table.simple th { color: var(--ink-2); font-weight: 600; } table.simple td.num { text-align: right; }
+  .scale { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .scale .bar { width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--seq-100), var(--seq-700)); }
+  details.about { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; margin-top: 10px; }
+  details.about summary { cursor: pointer; font-weight: 650; }
+  .warnbox { background: var(--surface); border-left: 3px solid var(--warn); padding: 8px 12px; margin: 8px 0; font-size: 13px; }
+  .kbd { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; }
+  @media (max-width: 800px) { .popover { columns: 1; min-width: 0; right: 12px; } .wrap { padding: 12px; } }
+  @media print { .controls, .tip { display: none; } .tablewrap { max-height: none; overflow: visible; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Tabular foundation models at or above TabICLv2 on TabArena</h1>
+      <div class="sub" id="intro"></div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="themeBtn" class="small" title="Toggle light / dark">◐ Theme</button>
+      <button id="csvBtn" class="small" title="Download the visible table as CSV">⬇ CSV</button>
+    </div>
+  </header>
+
+  <div class="controls" id="controls">
+    <input type="search" id="search" placeholder="Filter models… (name, developer, family)" style="min-width:260px">
+    <label class="chk"><input type="checkbox" id="commOnly"> commercial use permitted only</label>
+    <label class="chk"><input type="checkbox" id="openOnly"> open weights only</label>
+    <span class="sep"></span>
+    <label class="chk">TabArena subset for Elo columns
+      <select id="subsetSel"></select></label>
+    <span class="sep"></span>
+    <label class="chk">View <select id="presetSel"></select></label>
+    <button id="colsBtn" class="small">☰ Columns</button>
+    <div class="groups" id="groupChips"></div>
+    <span class="sep"></span>
+    <label class="chk"><input type="checkbox" id="fullText"> wrap long text</label>
+    <button id="resetBtn" class="small">Reset view</button>
+    <div class="popover" id="colsPop" hidden></div>
+  </div>
+
+  <div class="tablewrap compact" id="tablewrap"></div>
+  <p class="muted" style="margin-top:6px">Click a column header to sort (↑ / ↓ / off); click a model name to expand its full fact sheet. Hover a header or a <span class="info">i</span> marker for the definition or the source note. Long text is clipped to two lines unless “wrap long text” is on.<span id="provLegend" hidden> <span class="dag">†</span> = TabArena numbers self-reported by the model authors (not yet on the official leaderboard); hover the mark for details.</span></p>
+
+  <h2>TabArena at a glance</h2>
+  <div class="cards">
+    <figure id="figScatter"></figure>
+    <figure id="figSubsets"></figure>
+    <figure id="figWinrate" style="grid-column: 1 / -1"></figure>
+  </div>
+
+  <h2>TALENT benchmark</h2>
+  <div id="talentBlock"></div>
+
+  <h2>About this comparison</h2>
+  <div id="about"></div>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script src="data/compiled.js"></script>
+<script>
+(function () {
+  'use strict';
+  const D = window.TFM_DATA;
+  if (!D) { document.getElementById('tablewrap').textContent = 'data/compiled.js not found — run python3 scripts/build.py'; return; }
+  const MODELS = D.models;
+  const REF_ENTRY = 'TabICLv2 (default)';
+  const SUBSETS = D.tabarena_meta.subsets || {};
+
+  // ---------- helpers ------------------------------------------------------------------------------
+  const el = (tag, attrs, ...kids) => {
+    const n = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null) continue;
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+    }
+    for (const k of kids.flat()) if (k != null) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+    return n;
+  };
+  const get = (o, path) => path.split('.').reduce((a, k) => (a == null ? undefined : a[k]), o);
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  const fmtNum = (v, d = 2) => !isNum(v) ? '—' : (Math.abs(v) >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : v.toLocaleString('en-US', { maximumFractionDigits: d }));
+  const fmtInt = v => !isNum(v) ? '—' : v.toLocaleString('en-US');
+  const fmtBool = v => v === true ? 'yes' : v === false ? 'no' : '—';
+  const yesno = v => v === true || v === 'yes' ? 'ok' : v === false || v === 'no' ? 'no' : (v == null || v === 'unknown') ? '' : 'warn';
+  const lower = s => (s == null ? '' : String(s)).toLowerCase();
+  const pillFor = v => { const c = yesno(v); return el('span', { class: 'pill ' + c, text: v == null ? '—' : typeof v === 'boolean' ? fmtBool(v) : String(v) }); };
+  const infoMark = note => note ? el('span', { class: 'info', title: note, text: 'i' }) : null;
+  const store = { get(k, d) { try { const v = localStorage.getItem('tfm.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('tfm.' + k, JSON.stringify(v)); } catch (e) { } } };
+  const sub = m => m.tabarena ? (m.tabarena.subsets[state.subset] || null) : null;
+  const shortSrc = s => (s || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  // ---------- state ----------------------------------------------------------------------------------
+  const state = {
+    sort: store.get('sort', { id: 'elo', dir: 'desc' }), search: '', commOnly: false, openOnly: false,
+    subset: 'all', full: store.get('full', false), expanded: new Set(), hidden: new Set(store.get('hidden', null) || []),
+  };
+
+  // ---------- column definitions ---------------------------------------------------------------------
+  // Every column: id, label, type ('num'|'str'|'bool'|'list'|'link'|'date'), get(m) -> raw value, optional fmt(v,m) -> node/string,
+  // optional note(m) for the ⓘ marker, optional title (header tooltip), optional def (visible by default).
+  const txt = (path, label, o = {}) => ({ id: path, label, type: 'str', get: m => get(m, path), ...o });
+  const num = (path, label, o = {}) => ({ id: path, label, type: 'num', get: m => get(m, path), ...o });
+  const bool = (path, label, o = {}) => ({ id: path, label, type: 'bool', get: m => get(m, path), fmt: v => pillFor(v), ...o });
+  const list = (path, label, o = {}) => ({ id: path, label, type: 'list', get: m => get(m, path), fmt: v => Array.isArray(v) ? v.join(', ') : (v ?? '—'), ...o });
+  const link = (path, label, o = {}) => ({ id: path, label, type: 'link', get: m => get(m, path), fmt: v => v ? el('a', { href: v, target: '_blank', rel: 'noopener', text: shortSrc(v).slice(0, 40) }) : '—', ...o });
+  const withNote = (col, notePath) => ({ ...col, note: m => get(m, notePath) });
+
+  const METRIC_NAMES = { avg_rank: 'avg rank', avg_rank_auc: 'avg rank (AUC)', avg_rank_logloss: 'avg rank (log-loss)', avg_rank_mae: 'avg rank (MAE)', elo: 'Elo', accuracy: 'accuracy', mean_accuracy: 'mean accuracy', mean_r2: 'mean R²', rmse: 'RMSE', win_rate: 'win rate', win_count: 'wins', improvability_pct: 'improvability %', normalized_score: 'norm. score' };
+  const GROUPS = [
+    { id: 'overview', label: 'Overview', cols: [
+      { id: 'name', label: 'Model', type: 'str', get: m => m.name, def: true, sticky: true },
+      txt('developer', 'Developer', { def: true }),
+      { id: 'release_date', label: 'Released', type: 'date', get: m => m.release_date, def: true },
+      txt('family', 'Family'),
+      txt('organization_type', 'Org. type'),
+      txt('paper_title', 'Paper'),
+    ]},
+    { id: 'tabarena', label: 'TabArena · ' + (D.tabarena_meta.version || '').replace(/^TabArena-/, ''), cols: [
+      { id: 'position', label: '#', type: 'num', get: m => sub(m) ? sub(m).position : null, fmt: v => v == null ? '—' : String(v), title: 'Position on the TabArena leaderboard (models only, non-commercial included) for the selected subset', def: true },
+      { id: 'elo', label: 'Elo', type: 'num', get: m => sub(m) ? sub(m).elo : null, fmt: (v, m) => v == null ? '—' : el('span', null, fmtInt(v), el('span', { class: 'ci', text: sub(m).elo_ci })), title: 'TabArena Elo (pairwise win-rate rating; 400 points ≈ 91 % win rate) with 95 % confidence interval', def: true },
+      { id: 'score', label: 'Score', type: 'num', get: m => sub(m) ? sub(m).score : null, fmt: v => fmtNum(v, 3), title: 'Normalized score (0 = worst, 1 = best per dataset), averaged' },
+      { id: 'rank', label: 'Avg rank', type: 'num', get: m => sub(m) ? sub(m).rank : null, title: 'Average rank across datasets (lower is better)' },
+      { id: 'hrank', label: 'Harm. rank', type: 'num', get: m => sub(m) ? sub(m).harmonic_rank : null, title: 'Harmonic mean rank (rewards frequent top finishes)' },
+      { id: 'improv', label: 'Improvability %', type: 'num', get: m => sub(m) ? sub(m).improvability_pct : null, title: 'Relative gap to the best method, averaged over datasets (lower is better)' },
+      { id: 'fit', label: 'Fit s/1K', type: 'num', get: m => m.tabarena ? m.tabarena.train_time_s_per_1k : null, fmt: v => fmtNum(v, 2), title: 'Median training time per 1,000 training rows (GPU), warm-up excluded', def: true },
+      { id: 'infer', label: 'Infer s/1K', type: 'num', get: m => m.tabarena ? m.tabarena.predict_time_s_per_1k : null, fmt: v => fmtNum(v, 3), title: 'Median prediction time per 1,000 test rows (GPU)', def: true },
+      { id: 'wr_ref', label: 'Win-rate vs TabICLv2', type: 'num', get: m => m.tabarena_winrates ? m.tabarena_winrates[REF_ENTRY] ?? null : null, fmt: v => v == null ? '—' : (v * 100).toFixed(0) + ' %', title: 'Share of dataset splits won against TabICLv2 (default) on the full leaderboard', def: true },
+      { id: 'variant', label: 'Variant', type: 'str', get: m => m.tabarena ? m.tabarena.variant : null, title: 'default = single fit of the default config; tuned = 200 random configs; ensembled = weighted ensemble of tuned configs' },
+      { id: 'ta_license', label: 'Declared license', type: 'str', get: m => m.tabarena ? m.tabarena.license : null, title: 'License declared on the TabArena leaderboard' },
+      { id: 'ta_comm', label: 'Commercial (TabArena)', type: 'bool', get: m => m.tabarena ? m.tabarena.commercial : null, fmt: v => pillFor(v), title: 'TabArena\'s own commercial-use flag' },
+      { id: 'verified', label: 'Verified', type: 'bool', get: m => m.tabarena ? m.tabarena.verified : null, fmt: v => pillFor(v), title: 'Implementation verified by the TabArena maintainers' },
+      { id: 'imputed', label: 'Imputed %', type: 'num', get: m => sub(m) ? sub(m).imputed_pct : null, title: 'Share of imputed (missing) results' },
+      ...['classification', 'regression', 'binary', 'multiclass', 'small', 'medium', 'balanced', 'imbalanced', 'extreme'].map(k => ({
+        id: 'elo_' + k, label: 'Elo ' + (SUBSETS[k] ? SUBSETS[k].label.replace(' datasets', '').replace(' targets', '').replace(' classification', '') : k), type: 'num',
+        get: m => m.tabarena && m.tabarena.subsets[k] ? m.tabarena.subsets[k].elo : null, fmt: v => fmtInt(v),
+        title: (SUBSETS[k] ? SUBSETS[k].label + ' (' + SUBSETS[k].n_datasets + ' datasets)' : k) + ' — Elo on that subset', def: k === 'classification' || k === 'regression',
+      })),
+    ]},
+    { id: 'talent', label: 'TALENT (self-reported, per source)', cols: (D.talent_tables || []).map(t => ({
+      id: 'talent_' + t.id, label: talentLabel(t), type: 'num', get: m => m.talent && m.talent[t.id] ? m.talent[t.id].value : null,
+      fmt: (v, m) => v == null ? '—' : el('span', null, fmtNum(v, 2), infoMark(m.talent[t.id].note)), title: (t.source_title || '') + ' — ' + (t.protocol || ''), def: !!t.headline, lowerBetter: t.higher_is_better === false,
+    })).concat([{ id: 'talent_summary', label: 'TALENT summary', type: 'str', get: m => m.talent_summary, def: false }]) },
+    { id: 'arch', label: 'Architecture', cols: [
+      txt('architecture.type', 'Type', { def: true }),
+      withNote(num('architecture.parameters_m', 'Params (M)', { def: true, fmt: v => fmtNum(v, 1) }), 'architecture.parameters_note'),
+      txt('architecture.layers', 'Layers', { def: true }),
+      txt('architecture.embedding_dim', 'Embed dim'),
+      txt('architecture.attention_heads', 'Heads'),
+      txt('architecture.attention_scheme', 'Attention scheme'),
+      txt('architecture.checkpoints', 'Checkpoints', { def: true }),
+      txt('architecture.regression_head', 'Regression head'),
+      txt('architecture.feature_embedding', 'Feature embedding'),
+      list('architecture.key_innovations', 'Key innovations', { def: true }),
+      txt('differences_vs_predecessor', 'vs. predecessor'),
+    ]},
+    { id: 'cap', label: 'Capabilities & limits', cols: [
+      bool('capabilities.classification', 'Clf.'), bool('capabilities.regression', 'Regr.'),
+      withNote(num('capabilities.max_classes', 'Max classes', { def: true, fmt: fmtInt }), 'capabilities.max_classes_note'),
+      withNote(num('capabilities.max_features', 'Max features', { def: true, fmt: fmtInt }), 'capabilities.max_features_note'),
+      withNote(num('capabilities.max_samples', 'Max samples', { def: true, fmt: fmtInt }), 'capabilities.max_samples_note'),
+      txt('capabilities.missing_values', 'Missing values', { def: true }),
+      txt('capabilities.categorical_features', 'Categoricals'),
+      bool('capabilities.text_features', 'Text'),
+      txt('capabilities.other', 'Other abilities'),
+    ]},
+    { id: 'pretrain', label: 'Pretraining', cols: [
+      txt('pretraining.data_type', 'Data', { def: true }),
+      list('pretraining.synthetic_prior_types', 'Prior types', { def: true }),
+      txt('pretraining.synthetic_prior_summary', 'Synthetic data generation', { def: true }),
+      withNote(num('pretraining.num_synthetic_datasets', '# synthetic datasets', { fmt: v => v == null ? '—' : v.toExponential(1).replace('e+', 'e') }), 'pretraining.num_synthetic_datasets_note'),
+      txt('pretraining.real_data', 'Real data'),
+      txt('pretraining.objective', 'Objective'),
+      txt('pretraining.optimizer', 'Optimizer', { def: true }),
+      txt('pretraining.training_steps', 'Steps'), txt('pretraining.batch_size', 'Batch'),
+      txt('pretraining.hardware', 'Hardware', { def: true }), txt('pretraining.compute', 'Compute', { def: true }),
+      txt('pretraining.training_cost_note', 'Training cost note'), txt('pretraining.curriculum', 'Curriculum'),
+    ]},
+    { id: 'icl', label: 'In-context learning', cols: [
+      withNote(num('icl.max_context_rows', 'Max context rows', { def: true, fmt: fmtInt }), 'icl.context_note'),
+      txt('icl.large_dataset_strategy', 'Large-data strategy', { def: true }),
+      txt('icl.test_time_ensembling', 'Test-time ensembling', { def: true }),
+      txt('icl.fine_tuning', 'Fine-tuning'), txt('icl.inference_notes', 'Inference notes'),
+    ]},
+    { id: 'speed', label: 'Speed & cost', cols: [
+      txt('speed.speed_claims', 'Speed claims', { def: true }), txt('speed.hardware_note', 'Hardware (paper)'),
+      txt('speed.memory_note', 'Memory'), txt('speed.inference_cost_note', 'Inference cost'),
+    ]},
+    { id: 'license', label: 'Licensing & availability', cols: [
+      txt('license.weights', 'Weights license', { def: true }), txt('license.code', 'Code license', { def: true }),
+      txt('license.prior_or_data', 'Prior / data license'),
+      { id: 'license.commercial_use', label: 'Commercial use', type: 'str', get: m => get(m, 'license.commercial_use'), fmt: v => pillFor(v), def: true },
+      { id: 'license.non_commercial_use', label: 'Non-commercial use', type: 'str', get: m => get(m, 'license.non_commercial_use'), fmt: v => pillFor(v) },
+      txt('license.notes', 'License notes'),
+      bool('availability.open_weights', 'Open weights', { def: true }), bool('availability.local_inference', 'Local inference'),
+      bool('availability.hosted_api', 'Hosted API'), bool('availability.training_code_released', 'Training code'),
+      bool('availability.prior_code_released', 'Prior code'), txt('availability.notes', 'Availability notes'),
+    ]},
+    { id: 'links', label: 'Links', cols: [link('links.paper', 'Paper', { def: true }), link('links.code', 'Code', { def: true }), link('links.weights', 'Weights'), link('links.docs', 'Docs'), link('links.pypi', 'PyPI'), link('links.tabarena_pr', 'TabArena PR')] },
+  ];
+  function talentLabel(t) {
+    const metric = METRIC_NAMES[t.metric] || (t.metric || '').replace(/_/g, ' ');
+    const scope = t.task_scope && t.task_scope !== 'all' ? ` · ${t.task_scope}` : '';
+    const n = t.num_datasets ? ` (${t.num_datasets})` : '';
+    return `${metric}${scope} · ${t.source_short || t.source_title || t.id}${n}`;
+  }
+  const ALL_COLS = GROUPS.flatMap(g => g.cols.map(c => ({ ...c, group: g.id })));
+  // Preset views: lists of column ids (a group id selects the whole group). 'default' = the columns flagged def:true above.
+  const PRESETS = {
+    default: { label: 'Default (curated)', cols: null },
+    essentials: { label: 'Essentials', cols: ['name', 'developer', 'release_date', 'elo', 'infer', 'architecture.parameters_m', 'capabilities.max_features', 'capabilities.max_samples', 'license.commercial_use', 'availability.open_weights', 'links.paper'] },
+    benchmarks: { label: 'Benchmarks (TabArena + TALENT)', cols: ['name', 'tabarena', 'talent'] },
+    architecture: { label: 'Architecture & pretraining', cols: ['name', 'release_date', 'elo', 'arch', 'pretrain'] },
+    limits: { label: 'Limits, ICL & speed', cols: ['name', 'elo', 'fit', 'infer', 'cap', 'icl', 'speed'] },
+    licensing: { label: 'Licensing & availability', cols: ['name', 'developer', 'ta_license', 'ta_comm', 'license', 'links'] },
+    all: { label: 'Everything', cols: ['*'] },
+  };
+  function applyPreset(key) {
+    const p = PRESETS[key]; if (!p) return;
+    if (p.cols === null) { state.hidden = new Set(ALL_COLS.filter(c => !c.def).map(c => c.id)); }
+    else if (p.cols.includes('*')) { state.hidden = new Set(); }
+    else { const want = new Set(); for (const x of p.cols) { const g = GROUPS.find(g => g.id === x); if (g) g.cols.forEach(c => want.add(c.id)); else want.add(x); } state.hidden = new Set(ALL_COLS.filter(c => !want.has(c.id) && !c.sticky).map(c => c.id)); }
+    persist(); render(); buildChips(); buildPopover();
+  }
+  const colById = Object.fromEntries(ALL_COLS.map(c => [c.id, c]));
+  if (store.get('hidden', null) === null) state.hidden = new Set(ALL_COLS.filter(c => !c.def).map(c => c.id));
+
+  // ---------- intro ----------------------------------------------------------------------------------
+  (function intro() {
+    const ta = D.tabarena_meta; const n = MODELS.length;
+    const ref = MODELS.find(m => m.tabarena_entry === REF_ENTRY);
+    const nProv = MODELS.filter(m => m.tabarena && m.tabarena.provisional).length;
+    if (nProv) document.getElementById('provLegend').hidden = false;
+    document.getElementById('intro').append(
+      `${n} models whose TabArena entry scores at least as high as TabICLv2 (default, Elo ${ref && ref.tabarena ? fmtInt(ref.tabarena.elo) : '?'})${nProv ? `, of which ${nProv} ${nProv > 1 ? 'are' : 'is'} provisional (†: Elo self-reported by the authors, not yet on the official leaderboard)` : ''}. `,
+      'Leaderboard snapshot: ', el('b', { text: ta.version || '?' }), ` (retrieved ${ta.retrieved || '?'}), view “${ta.view || ''}”. `,
+      'Model facts are compiled from each model\'s paper, code repository and model card; TALENT numbers come from the papers that report them and are not directly comparable across sources. ',
+      el('a', { href: ta.url, target: '_blank', rel: 'noopener', text: 'TabArena leaderboard ↗' }));
+    if (D.warnings && D.warnings.length) document.getElementById('intro').append(el('div', { class: 'warnbox' }, 'Build warnings: ' + D.warnings.join(' · ')));
+  })();
+
+  // ---------- controls -------------------------------------------------------------------------------
+  const $ = id => document.getElementById(id);
+  const subsetSel = $('subsetSel');
+  for (const [k, v] of Object.entries(SUBSETS)) subsetSel.append(el('option', { value: k, text: `${v.label} (${v.n_datasets})` }));
+  subsetSel.value = state.subset;
+  subsetSel.addEventListener('change', () => { state.subset = subsetSel.value; render(); });
+  $('search').addEventListener('input', e => { state.search = lower(e.target.value); render(); });
+  $('commOnly').addEventListener('change', e => { state.commOnly = e.target.checked; render(); });
+  $('openOnly').addEventListener('change', e => { state.openOnly = e.target.checked; render(); });
+  $('fullText').checked = state.full;
+  $('fullText').addEventListener('change', e => { state.full = e.target.checked; store.set('full', state.full); render(); });
+  $('resetBtn').addEventListener('click', () => {
+    state.sort = { id: 'elo', dir: 'desc' }; state.hidden = new Set(ALL_COLS.filter(c => !c.def).map(c => c.id)); state.full = false; state.expanded.clear();
+    state.search = ''; $('search').value = ''; state.commOnly = false; $('commOnly').checked = false; state.openOnly = false; $('openOnly').checked = false; $('fullText').checked = false;
+    state.subset = 'all'; subsetSel.value = 'all'; presetSel.value = 'default'; persist(); render(); buildPopover(); buildChips();
+  });
+  $('themeBtn').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark'); store.set('theme', dark ? 'light' : 'dark'); renderCharts();
+  });
+  const savedTheme = store.get('theme', null); if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+  const presetSel = $('presetSel');
+  for (const [k, v] of Object.entries(PRESETS)) presetSel.append(el('option', { value: k, text: v.label }));
+  presetSel.addEventListener('change', () => applyPreset(presetSel.value));
+  $('colsBtn').addEventListener('click', () => { const p = $('colsPop'); p.hidden = !p.hidden; });
+  document.addEventListener('click', e => { if (!e.target.closest('#colsPop') && !e.target.closest('#colsBtn')) $('colsPop').hidden = true; });
+  $('csvBtn').addEventListener('click', exportCsv);
+  function persist() { store.set('sort', state.sort); store.set('hidden', [...state.hidden]); }
+
+  function buildPopover() {
+    const p = $('colsPop'); p.replaceChildren();
+    p.append(el('div', { style: 'column-span: all; margin-bottom: 6px; display:flex; gap:8px' },
+      el('button', { class: 'small', text: 'Show all', onclick: () => { state.hidden.clear(); persist(); render(); buildPopover(); } }),
+      el('button', { class: 'small', text: 'Defaults', onclick: () => { state.hidden = new Set(ALL_COLS.filter(c => !c.def).map(c => c.id)); persist(); render(); buildPopover(); } })));
+    for (const g of GROUPS) {
+      if (!g.cols.length) continue;
+      p.append(el('h4', { text: g.label }));
+      for (const c of g.cols) {
+        const cb = el('input', { type: 'checkbox' }); cb.checked = !state.hidden.has(c.id); if (c.sticky) cb.disabled = true;
+        cb.addEventListener('change', () => { if (cb.checked) state.hidden.delete(c.id); else state.hidden.add(c.id); persist(); render(); buildChips(); });
+        p.append(el('label', null, cb, ' ', c.label));
+      }
+    }
+  }
+  function buildChips() {
+    const box = $('groupChips'); box.replaceChildren();
+    for (const g of GROUPS) {
+      if (!g.cols.length) continue;
+      const vis = g.cols.filter(c => !state.hidden.has(c.id)).length;
+      const b = el('button', { class: 'small' + (vis ? ' active' : ''), title: `${vis}/${g.cols.length} columns shown — click to toggle the whole group`, text: `${g.label.split(' · ')[0]} ${vis}/${g.cols.length}` });
+      b.addEventListener('click', () => { const showAll = vis < g.cols.length; for (const c of g.cols) { if (c.sticky) continue; if (showAll) state.hidden.delete(c.id); else state.hidden.add(c.id); } persist(); render(); buildChips(); buildPopover(); });
+      box.append(b);
+    }
+  }
+
+  // ---------- table ----------------------------------------------------------------------------------
+  function visibleModels() {
+    let rows = MODELS.filter(m => {
+      if (state.search && !(lower(m.name) + ' ' + lower(m.developer) + ' ' + lower(m.family) + ' ' + lower(m.tabarena_entry)).includes(state.search)) return false;
+      if (state.commOnly && get(m, 'license.commercial_use') !== 'yes') return false;
+      if (state.openOnly && get(m, 'availability.open_weights') !== true) return false;
+      return true;
+    });
+    const col = colById[state.sort.id];
+    if (col && state.sort.dir) {
+      const dir = state.sort.dir === 'asc' ? 1 : -1;
+      const key = m => { let v = col.get(m); if (col.type === 'list') v = Array.isArray(v) ? v.join(', ') : v; if (col.type === 'bool') v = v === true ? 1 : v === false ? 0 : null; return v; };
+      rows = rows.map((m, i) => ({ m, i, v: key(m) })).sort((a, b) => {
+        const an = a.v == null || a.v === '', bn = b.v == null || b.v === '';
+        if (an && bn) return a.i - b.i; if (an) return 1; if (bn) return -1;
+        if (col.type === 'num') return (a.v - b.v) * dir;
+        return String(a.v).localeCompare(String(b.v), undefined, { numeric: true, sensitivity: 'base' }) * dir;
+      }).map(r => r.m);
+    }
+    return rows;
+  }
+  function cellNode(c, m) {
+    const v = c.get(m);
+    let content;
+    if (c.fmt) content = c.fmt(v, m);
+    else if (c.type === 'num') content = fmtNum(v);
+    else if (c.type === 'bool') content = fmtBool(v);
+    else content = v == null || v === '' ? '—' : String(v);
+    const td = el('td', { class: c.type === 'num' ? 'num' : (c.type === 'str' || c.type === 'list') ? 'txt' : '' });
+    if (c.type === 'str' || c.type === 'list') { const t = el('div', { class: 't' }); t.append(content.nodeType ? content : String(content)); if (typeof content === 'string' && content.length > 60) t.title = content; td.append(t); }
+    else td.append(content.nodeType ? content : String(content));
+    const note = c.note ? c.note(m) : null; if (note) td.append(infoMark(note));
+    if (c.group === 'tabarena' && m.tabarena && m.tabarena.provisional && v != null) { td.classList.add('prov'); td.append(el('span', { class: 'dag', text: '†', title: provTitle(m) })); }
+    return td;
+  }
+  const provTitle = m => `Self-reported by the model authors (${m.tabarena.source_title || 'source'}, ${m.tabarena.date || ''}); not yet on the official TabArena leaderboard. ${m.tabarena.status || ''} ${m.tabarena.elo_note || ''}`.trim();
+  function render() {
+    const wrap = $('tablewrap'); wrap.className = 'tablewrap ' + (state.full ? 'full' : 'compact');
+    const cols = ALL_COLS.filter(c => !state.hidden.has(c.id));
+    const rows = visibleModels();
+    const table = el('table', { class: 'cmp' });
+    const thead = el('thead'); const gh = el('tr', { class: 'gh' }); const ch = el('tr', { class: 'ch' });
+    for (const g of GROUPS) { const n = g.cols.filter(c => !state.hidden.has(c.id)).length; if (n) gh.append(el('th', { colspan: n, class: g.id === 'overview' ? 'stick' : '', text: g.label })); }
+    for (const c of cols) {
+      const th = el('th', { class: c.sticky ? 'stick' : '', title: c.title || c.label, scope: 'col' }, c.label);
+      if (state.sort.id === c.id && state.sort.dir) th.append(el('span', { class: 'arrow', text: state.sort.dir === 'asc' ? '↑' : '↓' }));
+      th.addEventListener('click', () => { const first = c.type === 'num' && !c.lowerBetter ? 'desc' : 'asc', second = first === 'desc' ? 'asc' : 'desc'; if (state.sort.id !== c.id || !state.sort.dir) state.sort = { id: c.id, dir: first }; else if (state.sort.dir === first) state.sort = { id: c.id, dir: second }; else state.sort = { id: c.id, dir: null }; persist(); render(); });
+      ch.append(th);
+    }
+    thead.append(gh, ch); table.append(thead);
+    const tbody = el('tbody');
+    for (const m of rows) {
+      const tr = el('tr', { class: state.expanded.has(m.id) ? 'open' : '' });
+      for (const c of cols) {
+        if (c.id === 'name') {
+          const td = el('td', { class: 'stick' });
+          const btn = el('div', { class: 'name', role: 'button', tabindex: '0', title: 'Show full fact sheet' },
+            el('span', { class: 'chev', text: '▶' }), el('span', { class: 'pos', text: m.tabarena ? (m.tabarena.provisional ? '†' : '#' + m.tabarena.position) : '' }), m.name);
+          const toggle = () => { if (state.expanded.has(m.id)) state.expanded.delete(m.id); else state.expanded.add(m.id); render(); };
+          btn.addEventListener('click', toggle); btn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+          td.append(btn, el('div', { class: 'note', text: m.tabarena_entry }));
+          tr.append(td);
+        } else tr.append(cellNode(c, m));
+      }
+      tbody.append(tr);
+      if (state.expanded.has(m.id)) tbody.append(el('tr', { class: 'details' }, el('td', { colspan: cols.length }, el('div', { class: 'dinner', style: `width:${Math.max(320, (wrap.clientWidth || (window.innerWidth - 60)) - 40)}px` }, renderDetails(m)))));
+    }
+    if (!rows.length) tbody.append(el('tr', null, el('td', { colspan: cols.length, text: 'No model matches the current filters.' })));
+    table.append(tbody);
+    wrap.replaceChildren(table);
+  }
+
+  // ---------- details renderer (generic: any new field in the JSON shows up automatically) ---------------
+  const LABELS = { parameters_m: 'parameters (M)', max_context_rows: 'max context rows', num_synthetic_datasets: '# synthetic datasets', tabarena_pr: 'TabArena PR' };
+  const nice = k => LABELS[k] || k.replace(/_/g, ' ');
+  function valNode(v) {
+    if (v == null || v === '') return el('span', { class: 'muted', text: '—' });
+    if (Array.isArray(v)) { if (!v.length) return el('span', { class: 'muted', text: '—' }); return el('ul', null, v.map(x => el('li', null, typeof x === 'object' ? valNode(x) : String(x)))); }
+    if (typeof v === 'object') { if (v.url && v.title) return el('a', { href: v.url, target: '_blank', rel: 'noopener', text: v.title }); return el('dl', null, Object.entries(v).flatMap(([k, x]) => [el('dt', { text: nice(k) }), el('dd', null, valNode(x))])); }
+    if (typeof v === 'boolean') return pillFor(v);
+    if (typeof v === 'number') return fmtNum(v, 3);
+    if (/^https?:\/\/\S+$/.test(v)) return el('a', { href: v, target: '_blank', rel: 'noopener', text: v });
+    return String(v);
+  }
+  function section(title, obj, keys) {
+    if (!obj) return null;
+    const entries = keys ? keys.filter(k => k in obj).map(k => [k, obj[k]]) : Object.entries(obj);
+    return el('div', { class: 'dsec' }, el('h4', { text: title }), el('dl', null, entries.flatMap(([k, v]) => [el('dt', { text: nice(k) }), el('dd', null, valNode(v))])));
+  }
+  function renderDetails(m) {
+    const box = el('div');
+    const top = el('div', { class: 'dgrid' });
+    top.append(section('Identity', { developer: m.developer, organization_type: m.organization_type, family: m.family, release_date: m.release_date, paper_title: m.paper_title, tabarena_entry: m.tabarena_entry }));
+    top.append(section('Links', m.links));
+    top.append(section('Licensing', m.license));
+    top.append(section('Availability', m.availability));
+    top.append(section('Architecture', m.architecture));
+    top.append(section('Capabilities & limits', m.capabilities));
+    top.append(section('Pretraining', m.pretraining));
+    top.append(section('In-context learning', m.icl));
+    top.append(section('Speed & cost', m.speed));
+    top.append(section('Benchmarks reported by the authors', m.benchmarks));
+    if (m.tabarena && m.tabarena.provisional) {
+      top.append(el('div', { class: 'dsec' }, el('h4', { text: 'TabArena (provisional, self-reported †)' }),
+        el('p', null, `Elo ${fmtInt(m.tabarena.elo)} reported by the authors`, m.tabarena.source_url ? el('span', null, ' in ', el('a', { href: m.tabarena.source_url, target: '_blank', rel: 'noopener', text: m.tabarena.source_title || m.tabarena.source_url })) : '', m.tabarena.date ? ` (${m.tabarena.date})` : '', '.'),
+        m.tabarena.elo_note ? el('p', { class: 'note', text: m.tabarena.elo_note }) : null,
+        el('p', { class: 'note', text: m.tabarena.status || '' }),
+        el('p', { class: 'note', text: `Hardware: ${m.tabarena.hardware || 'not stated'}. Official rank, score, timings, subset Elo and win-rates will appear here once the leaderboard lists the model (re-run scripts/fetch_tabarena.sh + scripts/build.py).` })));
+    } else if (m.tabarena) {
+      const t = el('table', null, el('tr', null, el('th', { text: 'TabArena variant' }), el('th', { text: 'Elo' }), el('th', { text: 'CI' }), el('th', { text: 'Score' }), el('th', { text: 'Fit s/1K' }), el('th', { text: 'Infer s/1K' })));
+      for (const v of (m.tabarena_variants || [])) t.append(el('tr', null, el('td', { text: v.label }), el('td', { text: fmtInt(v.elo) }), el('td', { text: v.elo_ci }), el('td', { text: fmtNum(v.score, 3) }), el('td', { text: fmtNum(v.train_time_s_per_1k, 2) }), el('td', { text: fmtNum(v.predict_time_s_per_1k, 3) })));
+      const subs = el('table', null, el('tr', null, el('th', { text: 'Subset' }), el('th', { text: '#' }), el('th', { text: 'Elo' }), el('th', { text: 'CI' }), el('th', { text: 'Score' }), el('th', { text: 'Avg rank' }), el('th', { text: 'Improv. %' })));
+      for (const [k, s] of Object.entries(m.tabarena.subsets)) subs.append(el('tr', null, el('td', { text: (SUBSETS[k] || {}).label || k }), el('td', { text: s.position }), el('td', { text: fmtInt(s.elo) }), el('td', { text: s.elo_ci }), el('td', { text: fmtNum(s.score, 3) }), el('td', { text: fmtNum(s.rank, 2) }), el('td', { text: fmtNum(s.improvability_pct, 1) })));
+      const wr = el('ul', null, Object.entries(m.tabarena_winrates || {}).sort((a, b) => (b[1] ?? -1) - (a[1] ?? -1)).map(([k, v]) => el('li', null, `${v == null ? '—' : (v * 100).toFixed(0) + ' %'} vs ${k}`)));
+      top.append(el('div', { class: 'dsec' }, el('h4', { text: 'TabArena (all variants of this model)' }), t, el('p', { class: 'note', text: `Declared license: ${m.tabarena.license} · commercial: ${m.tabarena.commercial ? 'yes' : 'no'} · hardware: ${m.tabarena.hardware}` })));
+      top.append(el('div', { class: 'dsec' }, el('h4', { text: 'TabArena by subset (this variant)' }), subs));
+      top.append(el('div', { class: 'dsec' }, el('h4', { text: 'TabArena win-rates against the other compared models' }), wr));
+    }
+    if (m.talent && Object.keys(m.talent).length) {
+      const tt = el('table', null, el('tr', null, el('th', { text: 'TALENT table' }), el('th', { text: 'Value' }), el('th', { text: 'Note' })));
+      for (const [k, v] of Object.entries(m.talent)) { const t = (D.talent_tables || []).find(x => x.id === k) || {}; tt.append(el('tr', null, el('td', { text: talentLabel(t) }), el('td', { text: fmtNum(v.value, 3) }), el('td', { text: v.note || '' }))); }
+      top.append(el('div', { class: 'dsec' }, el('h4', { text: 'TALENT (compiled)' }), tt, m.talent_summary ? el('p', { class: 'note', text: m.talent_summary }) : null));
+    }
+    box.append(top);
+    const extra = el('div', { class: 'dgrid', style: 'margin-top:12px' });
+    if (m.differences_vs_predecessor) extra.append(el('div', { class: 'dsec' }, el('h4', { text: 'Differences vs. predecessor' }), el('p', null, m.differences_vs_predecessor)));
+    if (m.notes) extra.append(el('div', { class: 'dsec' }, el('h4', { text: 'Notes' }), el('p', null, m.notes)));
+    if (m.sources && m.sources.length) extra.append(el('div', { class: 'dsec' }, el('h4', { text: 'Sources' }), el('ul', null, m.sources.map(s => el('li', null, el('a', { href: s.url, target: '_blank', rel: 'noopener', text: s.title || s.url }))))));
+    // any top-level keys not covered above appear here so schema extensions are never silently dropped
+    const known = new Set(['id', 'name', 'tabarena_entry', 'family', 'developer', 'organization_type', 'release_date', 'paper_title', 'links', 'availability', 'license', 'architecture', 'capabilities', 'pretraining', 'icl', 'speed', 'benchmarks', 'differences_vs_predecessor', 'sources', 'notes', 'tabarena', 'tabarena_variants', 'tabarena_winrates', 'tabarena_self_reported', 'talent', 'talent_summary']);
+    const rest = Object.fromEntries(Object.entries(m).filter(([k]) => !known.has(k)));
+    if (Object.keys(rest).length) extra.append(section('Other fields', rest));
+    box.append(extra);
+    return box;
+  }
+
+  // ---------- CSV export -----------------------------------------------------------------------------
+  function exportCsv() {
+    const cols = ALL_COLS.filter(c => !state.hidden.has(c.id));
+    const esc = v => { if (v == null) return ''; if (Array.isArray(v)) v = v.join('; '); v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lines = [cols.map(c => esc(c.label)).join(',')];
+    for (const m of visibleModels()) lines.push(cols.map(c => esc(c.get(m))).join(','));
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = el('a', { href: URL.createObjectURL(blob), download: 'tfm_comparison.csv' }); document.body.append(a); a.click(); a.remove();
+  }
+
+  // ---------- charts ---------------------------------------------------------------------------------
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const RAMP = ['--seq-100', '--seq-150', '--seq-200', '--seq-250', '--seq-300', '--seq-350', '--seq-400', '--seq-450', '--seq-500', '--seq-550', '--seq-600', '--seq-650', '--seq-700'];
+  const ramp = t => css(RAMP[Math.max(0, Math.min(RAMP.length - 1, Math.round(t * (RAMP.length - 1))))]);
+  const inkOn = t => t > 0.45 ? '#ffffff' : '#0b0b0b';
+  const tip = $('tip');
+  function showTip(e, node) { tip.replaceChildren(node); tip.hidden = false; moveTip(e); }
+  function moveTip(e) { const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX + 14, y = e.clientY + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14; tip.style.left = x + 'px'; tip.style.top = y + 'px'; }
+  function hideTip() { tip.hidden = true; }
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const sv = (tag, attrs, ...kids) => { const n = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); for (const k of kids) if (k != null) n.append(k.nodeType ? k : document.createTextNode(String(k))); return n; };
+  let scatterAxis = 'infer';
+
+  function renderScatter() {
+    const fig = $('figScatter'); fig.replaceChildren();
+    const pts = MODELS.filter(m => m.tabarena && isNum(m.tabarena.elo)).map(m => ({ m, x: scatterAxis === 'infer' ? m.tabarena.predict_time_s_per_1k : m.tabarena.train_time_s_per_1k, y: m.tabarena.elo, comm: get(m, 'license.commercial_use') === 'yes', prov: !!m.tabarena.provisional })).filter(p => isNum(p.x) && p.x > 0);
+    const unplotted = MODELS.filter(m => m.tabarena && m.tabarena.provisional && !isNum(scatterAxis === 'infer' ? m.tabarena.predict_time_s_per_1k : m.tabarena.train_time_s_per_1k)).map(m => m.name);
+    fig.append(el('figcaption', null, 'Elo vs. ', scatterAxis === 'infer' ? 'prediction' : 'training', ' time'), el('div', { class: 'fnote', text: 'TabArena, all 51 datasets; time is the median per 1,000 rows on GPU (log scale). Up and to the left is better.' + (unplotted.length ? ` Not plotted (no official timing yet): ${unplotted.join(', ')}.` : '') }));
+    const ctl = el('div', { class: 'legend' },
+      el('button', { class: 'small' + (scatterAxis === 'infer' ? ' active' : ''), text: 'Infer time', onclick: () => { scatterAxis = 'infer'; renderScatter(); } }),
+      el('button', { class: 'small' + (scatterAxis === 'fit' ? ' active' : ''), text: 'Fit time', onclick: () => { scatterAxis = 'fit'; renderScatter(); } }),
+      el('span', null, el('span', { class: 'sw', style: 'background:' + css('--accent') }), 'commercial use permitted'),
+      el('span', null, el('span', { class: 'sw', style: 'background:' + css('--series-2') }), 'non-commercial / restricted'));
+    fig.append(ctl);
+    if (!pts.length) { fig.append(el('p', { class: 'muted', text: 'No TabArena timing data.' })); return; }
+    const W = 640, H = 380, L = 52, R = 24, T = 12, B = 40;
+    const xs = pts.map(p => Math.log10(p.x)), ys = pts.map(p => p.y);
+    const x0 = Math.floor(Math.min(...xs) - 0.2), x1 = Math.ceil(Math.max(...xs) + 0.6);
+    const y0 = Math.floor((Math.min(...ys) - 40) / 100) * 100, y1 = Math.ceil((Math.max(...ys) + 40) / 100) * 100;
+    const X = v => L + (Math.log10(v) - x0) / (x1 - x0) * (W - L - R), Y = v => T + (y1 - v) / (y1 - y0) * (H - T - B);
+    const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Scatter plot of TabArena Elo against time per 1,000 rows' });
+    for (let e = x0; e <= x1; e++) { const v = Math.pow(10, e); svg.append(sv('line', { class: 'gridline', x1: X(v), x2: X(v), y1: T, y2: H - B })); svg.append(sv('text', { x: X(v), y: H - B + 16, 'text-anchor': 'middle' }, v >= 1 ? fmtInt(v) : v.toString())); }
+    for (let v = y0; v <= y1; v += 100) { svg.append(sv('line', { class: 'gridline', x1: L, x2: W - R, y1: Y(v), y2: Y(v) })); svg.append(sv('text', { x: L - 6, y: Y(v) + 4, 'text-anchor': 'end' }, fmtInt(v))); }
+    svg.append(sv('line', { class: 'axisline', x1: L, x2: W - R, y1: H - B, y2: H - B }), sv('line', { class: 'axisline', x1: L, x2: L, y1: T, y2: H - B }));
+    svg.append(sv('text', { x: (L + W - R) / 2, y: H - 6, 'text-anchor': 'middle' }, (scatterAxis === 'infer' ? 'prediction' : 'training') + ' time, s per 1K rows (log)'));
+    svg.append(sv('text', { x: 12, y: T + 8, transform: `rotate(-90 12 ${T + 8})`, 'text-anchor': 'end' }, 'Elo'));
+    // label placement: candidates right / left / above / below the point; keep the first that overlaps neither a placed label nor a point
+    const boxes = pts.map(p => ({ x: X(p.x) - 7, y: Y(p.y) - 7, w: 14, h: 14 }));
+    const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const placed = [];
+    for (const p of pts.slice().sort((a, b) => Y(a.y) - Y(b.y) || X(a.x) - X(b.x))) {
+      const w = p.m.name.length * 6.3 + 4, h = 12, px = X(p.x), py = Y(p.y);
+      const cands = [
+        { x: px + 9, y: py + 4, anchor: 'start' }, { x: px - 9, y: py + 4, anchor: 'end' },
+        { x: px, y: py - 10, anchor: 'middle' }, { x: px, y: py + 17, anchor: 'middle' },
+        { x: px + 9, y: py - 8, anchor: 'start' }, { x: px + 9, y: py + 16, anchor: 'start' },
+        { x: px - 9, y: py - 8, anchor: 'end' }, { x: px - 9, y: py + 16, anchor: 'end' },
+      ];
+      let pick = cands[0], pickBox = null;
+      for (const c of cands) {
+        const bx = c.anchor === 'start' ? c.x : c.anchor === 'end' ? c.x - w : c.x - w / 2;
+        const box = { x: bx, y: c.y - h + 2, w, h };
+        if (bx < L || bx + w > W - 2 || box.y < 0) continue;
+        if (!placed.some(q => hits(box, q.box)) && !boxes.some(b => hits(box, b))) { pick = c; pickBox = box; break; }
+      }
+      if (!pickBox) { const c = cands[0]; pickBox = { x: c.x, y: c.y - h + 2, w, h }; }
+      placed.push({ p, lx: pick.x, ly: pick.y, anchor: pick.anchor, box: pickBox });
+    }
+    for (const { p, lx, ly, anchor } of placed) {
+      const g = sv('g', { tabindex: '0', style: 'cursor:default; outline:none' });
+      g.append(sv('circle', { class: 'hit', cx: X(p.x), cy: Y(p.y), r: 14 }));
+      g.append(sv('circle', { class: 'pt ' + (p.comm ? 'comm' : 'nc'), cx: X(p.x), cy: Y(p.y), r: 5.5, style: p.prov ? 'fill: var(--surface); stroke: ' + (p.comm ? 'var(--accent)' : 'var(--series-2)') + '; stroke-width: 2' : '' }));
+      g.append(sv('text', { class: 'lbl', x: lx, y: ly, 'text-anchor': anchor }, p.m.name + (p.prov ? ' †' : '')));
+      const node = () => el('div', null, el('b', { text: p.m.name }), el('br'), `Elo ${fmtInt(p.y)} (${p.m.tabarena.elo_ci})`, el('br'), `fit ${fmtNum(p.m.tabarena.train_time_s_per_1k, 2)} s/1K · infer ${fmtNum(p.m.tabarena.predict_time_s_per_1k, 3)} s/1K`, el('br'), el('span', { class: 'muted', text: p.m.tabarena.license }));
+      g.addEventListener('pointermove', e => showTip(e, node())); g.addEventListener('pointerleave', hideTip); g.addEventListener('focus', () => showTip({ clientX: 40, clientY: 40 }, node())); g.addEventListener('blur', hideTip);
+      svg.append(g);
+    }
+    fig.append(svg);
+  }
+
+  function heatTable(rowLabels, colLabels, value, opts) {
+    const t = el('table', { class: 'heat' });
+    const hr = el('tr', null, el('th'));
+    for (const c of colLabels) hr.append(el('th', { class: 'col', text: c }));
+    t.append(hr);
+    rowLabels.forEach((r, i) => {
+      const tr = el('tr', null, el('th', { text: r }));
+      colLabels.forEach((c, j) => {
+        const v = value(i, j);
+        if (v == null) { tr.append(el('td', { class: 'empty', text: '·' })); return; }
+        const tt = Math.max(0, Math.min(1, (v - opts.min) / (opts.max - opts.min)));
+        const td = el('td', { style: `background:${ramp(tt)};color:${inkOn(tt)}`, text: opts.fmt(v), title: `${r} · ${c}: ${opts.fmt(v)}` });
+        tr.append(td);
+      });
+      t.append(tr);
+    });
+    return t;
+  }
+  function renderSubsets() {
+    const fig = $('figSubsets'); fig.replaceChildren();
+    const ms = MODELS.filter(m => m.tabarena);
+    const keys = Object.keys(SUBSETS);
+    const vals = ms.flatMap(m => keys.map(k => m.tabarena.subsets[k] ? m.tabarena.subsets[k].elo : null)).filter(isNum);
+    fig.append(el('figcaption', { text: 'Elo by TabArena subset' }), el('div', { class: 'fnote', text: 'Rows ordered by overall Elo. Darker = higher Elo; each subset is a separate leaderboard, so compare within a column.' + (ms.some(m => m.tabarena.provisional) ? ' † = self-reported overall Elo only.' : '') }));
+    const shortLabel = k => ({ all: 'All', classification: 'Classification', regression: 'Regression', binary: 'Binary', multiclass: 'Multiclass', small: 'Small', medium: 'Medium', balanced: 'Balanced', imbalanced: 'Imbalanced', extreme: 'Extreme imbalance' }[k] || SUBSETS[k].label) + ` (${SUBSETS[k].n_datasets})`;
+    fig.append(el('div', { style: 'overflow:auto' }, heatTable(ms.map(m => m.name + (m.tabarena.provisional ? ' †' : '')), keys.map(shortLabel), (i, j) => { const s = ms[i].tabarena.subsets[keys[j]]; return s ? s.elo : null; }, { min: Math.min(...vals), max: Math.max(...vals), fmt: fmtInt })));
+    fig.append(el('div', { class: 'scale' }, fmtInt(Math.min(...vals)), el('span', { class: 'bar' }), fmtInt(Math.max(...vals))));
+  }
+  function renderWinrate() {
+    const fig = $('figWinrate'); fig.replaceChildren();
+    const ms = MODELS.filter(m => m.tabarena && !m.tabarena.provisional && m.tabarena_winrates);
+    fig.append(el('figcaption', { text: 'Pairwise win-rates on TabArena' }), el('div', { class: 'fnote', text: 'Share of the 51 datasets × splits on which the row model beats the column model (ties count half). Read across a row: darker = the row model wins more often.' }));
+    fig.append(el('div', { style: 'overflow:auto' }, heatTable(ms.map(m => m.name), ms.map(m => m.name), (i, j) => i === j ? null : ms[i].tabarena_winrates[ms[j].tabarena_entry] ?? null, { min: 0, max: 1, fmt: v => (v * 100).toFixed(0) + ' %' })));
+    fig.append(el('div', { class: 'scale' }, '0 %', el('span', { class: 'bar' }), '100 %'));
+  }
+  function renderCharts() { renderScatter(); renderSubsets(); renderWinrate(); }
+
+  // ---------- TALENT block ------------------------------------------------------------------------------
+  function renderTalent() {
+    const box = $('talentBlock'); box.replaceChildren();
+    const meta = D.talent_meta || {};
+    box.append(el('p', { class: 'ink2' }, meta.description || 'TALENT (LAMDA, Nanjing University) is a benchmark of ~300 tabular datasets. ', ' ', meta.url ? el('a', { href: meta.url, target: '_blank', rel: 'noopener', text: 'benchmark ↗' }) : null, ' ', meta.official_leaderboard ? el('a', { href: meta.official_leaderboard, target: '_blank', rel: 'noopener', text: 'official results ↗' }) : null));
+    if (meta.notes) box.append(el('p', { class: 'note', text: meta.notes }));
+    const tables = D.talent_tables || [];
+    if (!tables.length) { box.append(el('p', { class: 'muted', text: 'No TALENT tables compiled yet (data/talent.json).' })); return; }
+    box.append(el('div', { class: 'warnbox', text: `${tables.length} tables from ${new Set(tables.map(t => t.source_url)).size} sources. Each table comes from one paper with its own protocol (dataset subset, context policy, metric, seeds), so numbers are comparable within a table, not across tables. Headline tables (★) are the ones shown as columns in the comparison table by default; other models' numbers from the same tables (e.g. TabPFN-2.5, TabICL v1, LimiX v1, CatBoost) are kept as context.` }));
+    const bySource = new Map();
+    for (const t of tables) { const k = t.source_short || t.source_title; if (!bySource.has(k)) bySource.set(k, []); bySource.get(k).push(t); }
+    const figureFor = t => {
+      const rows = MODELS.map(m => ({ name: m.name, v: m.talent && m.talent[t.id] ? m.talent[t.id] : null, compared: true })).filter(r => r.v);
+      const ids = new Set(MODELS.map(m => m.id));
+      const raw = (D.talent_raw || {})[t.id] || {};
+      for (const [k, v] of Object.entries(raw.results || {})) if (!ids.has(k)) rows.push({ name: (raw.results_note || {})[k] || k, v: { value: v, note: k }, compared: false });
+      rows.sort((a, b) => t.higher_is_better === false ? a.v.value - b.v.value : b.v.value - a.v.value);
+      const tab = el('table', { class: 'simple' }, el('tr', null, el('th', { text: '#' }), el('th', { text: 'Model' }), el('th', { text: METRIC_NAMES[t.metric] || t.metric || 'value' }), el('th', { text: 'Label in source' })));
+      rows.forEach((r, i) => tab.append(el('tr', { class: r.compared ? '' : 'muted' }, el('td', { text: i + 1 }), el('td', null, r.compared ? el('b', { text: r.name }) : r.name), el('td', { class: 'num', text: fmtNum(r.v.value, 3) }), el('td', { class: 'note', text: r.compared ? (r.v.note || '') : 'context (not in this comparison)' }))));
+      return el('figure', null, el('figcaption', null, t.headline ? '★ ' : '', talentLabel(t), ' ', el('span', { class: 'muted', text: t.higher_is_better === false ? '(lower is better)' : '(higher is better)' })),
+        el('div', { class: 'fnote' }, el('a', { href: t.source_url, target: '_blank', rel: 'noopener', text: t.source_title || t.source_url }), t.source_date ? ` · ${t.source_date}` : '', t.num_datasets ? ` · ${t.num_datasets} datasets` : ''),
+        el('p', { class: 'note', text: t.protocol || '' }), tab, t.notes ? el('p', { class: 'note', text: t.notes }) : null);
+    };
+    for (const [src, ts] of bySource) {
+      const head = ts.filter(t => t.headline), rest = ts.filter(t => !t.headline);
+      const d = el('details', { class: 'about', open: head.length ? '' : null }, el('summary', null, `${src} — ${ts.length} table${ts.length > 1 ? 's' : ''}`, el('span', { class: 'muted', text: ` · ${ts[0].source_title || ''}` })));
+      const grid = el('div', { class: 'cards', style: 'margin-top:10px' });
+      for (const t of head) grid.append(figureFor(t));
+      d.append(grid);
+      if (rest.length) { const d2 = el('details', { style: 'margin-top:10px' }, el('summary', { class: 'muted', style: 'cursor:pointer', text: `Show ${rest.length} more table${rest.length > 1 ? 's' : ''} from this source` })); const g2 = el('div', { class: 'cards', style: 'margin-top:10px' }); for (const t of rest) g2.append(figureFor(t)); d2.append(g2); d.append(d2); }
+      box.append(d);
+    }
+  }
+
+  // ---------- about -----------------------------------------------------------------------------------
+  function renderAbout() {
+    const a = $('about');
+    a.append(el('details', { class: 'about', open: '' }, el('summary', { text: 'Method, caveats and how to extend' }),
+      el('ul', null,
+        el('li', null, el('b', { text: 'Selection. ' }), `Every TabArena entry (models-only view, non-commercial methods included, imputed results included) with an Elo at least as high as TabICLv2 (default). RealTabPFN-2.5 qualifies only through its tuned + ensembled variant; its default configuration scores lower. Models marked † are not on the official leaderboard yet and are listed on the strength of their authors' own TabArena evaluation; their numbers are replaced automatically once an official row exists.`),
+        el('li', null, el('b', { text: 'TabArena numbers. ' }), `Taken verbatim from the leaderboard's CSV export (${D.tabarena_meta.version || ''}). Elo is relative to the field being compared, so it changes whenever models are added. Fit/infer times are medians per 1,000 rows on the benchmark GPU and exclude one-off warm-up (library import, checkpoint loading).`),
+        el('li', null, el('b', { text: 'Model facts. ' }), 'Compiled from each model\'s paper or technical report, code repository, model card and license text. Anything not stated by the authors is shown as “—”. Hover the ⓘ markers for the source note. Release dates are the date of the paper or model release.'),
+        el('li', null, el('b', { text: 'TALENT. ' }), 'There is no single official TALENT leaderboard covering these models, so each TALENT table is reproduced from the paper that reports it, with that paper\'s protocol. Do not compare numbers across tables.'),
+        el('li', null, el('b', { text: 'Licenses. ' }), 'Two views are shown: the license declared on TabArena (leaderboard column) and the license of the released weights / code as read from the repositories. “Commercial use” refers to the weights. Always read the actual license before relying on this summary.'),
+        el('li', null, el('b', { text: 'Extending. ' }), 'Add a file ', el('code', { text: 'data/models/<id>.json' }), ' following ', el('code', { text: 'data/SCHEMA.md' }), ', refresh the leaderboard with ', el('code', { text: 'scripts/fetch_tabarena.sh' }), ' and rebuild with ', el('code', { text: 'python3 scripts/build.py' }), '. New TALENT tables go into ', el('code', { text: 'data/talent.json' }), '. Columns are generated from the data, so new fields appear in the fact sheets automatically.'),
+      ),
+      el('p', { class: 'note', text: `Built ${D.generated || ''}.` })));
+  }
+
+  buildChips(); buildPopover(); render(); renderCharts(); renderTalent(); renderAbout();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderCharts);
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (state.expanded.size) render(); }, 150); });
+})();
+</script>
+</body>
+</html>

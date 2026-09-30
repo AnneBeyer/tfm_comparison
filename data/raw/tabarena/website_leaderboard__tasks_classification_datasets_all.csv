@@ -1,0 +1,91 @@
+#,Type,TypeName,Model,Elo [⬆️],Elo 95% CI,Score [⬆️],Rank [⬇️],Harmonic Rank [⬇️],Improvability (%) [⬇️],Median Train Time (s/1K) [⬇️],Median Predict Time (s/1K) [⬇️],Verified,Imputed (%) [⬇️],Imputed,Hardware,MethodClass,Tags,Commercial,License
+0,🧠⚡,Foundation Model,[LimiX-2 (default)](https://arxiv.org/abs/2609.17488),1913.0,+132/-78,0.919,5.73,2.0,3.55,36.96,10.081,✔️,0.0,False,GPU,model,,False,StableAI LimiX Non-Commercial License v1.0
+1,🧠⚡,Foundation Model,[TabPFN-3.5 (default)](https://arxiv.org/abs/2609.17895),1837.0,+108/-70,0.795,7.86,3.37,8.728,1.85,0.518,✔️,0.0,False,GPU,model,,False,TabPFN-3.5 License v1.0 (non-commercial)
+2,🧠⚡,Foundation Model,[TabPFN-3.5-Fast (default)](https://arxiv.org/abs/2609.17895),1776.0,+103/-68,0.727,10.05,5.41,10.017,0.72,0.168,✔️,0.0,False,GPU,model,,False,TabPFN-3.5 License v1.0 (non-commercial)
+3,🧠⚡,Foundation Model,[Causilo (default)](https://github.com/nums-ai/causilo),1765.0,+89/-69,0.714,10.5,5.37,10.628,0.84,0.11,✔️,0.0,False,GPU,model,,False,Causilo License v1.0 (non-commercial weights)
+4,🧠⚡,Foundation Model,[TabFM (default)](https://github.com/google-research/tabfm),1758.0,+130/-115,0.761,10.76,2.58,6.866,18.45,6.809,✔️,0.0,False,GPU,model,,False,TabFM Non-Commercial License v1.0
+5,🧠⚡,Foundation Model,[EXAONE-Tabular (default)](https://github.com/LGAI-Research/EXAONE-Tabular),1751.0,+86/-58,0.712,11.08,5.14,10.718,1.53,0.492,✔️,0.0,False,GPU,model,,False,EXAONE AI Model License 1.2 - NC
+6,🧠⚡,Foundation Model,[Mitra-v2 (default)](https://arxiv.org/abs/2609.04540),1745.0,+124/-86,0.712,11.32,4.46,9.6,72.59,1.064,✔️,0.0,False,GPU,model,,True,Apache-2.0
+7,🧠⚡,Foundation Model,[TabPFN-3 (default)](https://arxiv.org/abs/2605.13986),1625.0,+76/-63,0.542,17.62,9.96,13.665,1.28,0.384,✔️,0.0,False,GPU,model,,False,TabPFN-3 License v1.0 (non-commercial)
+8,🧠⚡,Foundation Model,[Xiaomi-TabLDM (default)](https://huggingface.co/occams/Xiaomi-TabLDM),1577.0,+72/-56,0.501,20.79,10.28,14.218,1.3,0.271,✔️,0.0,False,GPU,model,,True,Apache-2.0
+9,🧠⚡,Foundation Model,[TabPFN-2.6 (default)](https://arxiv.org/abs/2511.08667),1576.0,+58/-55,0.462,20.83,14.13,14.87,5.17,0.539,✔️,0.0,False,GPU,model,,False,TabPFN-2.6 License v1.0 (non-commercial)
+10,🧠⚡,Foundation Model,[TabICLv2 (default)](https://arxiv.org/abs/2602.11139),1568.0,+73/-66,0.501,21.44,10.84,14.191,0.93,0.142,✔️,0.0,False,GPU,model,,True,BSD-3-Clause
+11,🧠⚡,Foundation Model,[RealTabPFN-2.5 (tuned + ensembled)](https://arxiv.org/abs/2511.08667),1554.0,+66/-65,0.427,22.42,12.8,14.676,2046.25,8.969,✔️,0.0,False,GPU,model,,False,TabPFN-2.5 License v1.1 (non-commercial)
+12,🧠⚡,Foundation Model,[RealTabPFN-2.5 (tuned)](https://arxiv.org/abs/2511.08667),1535.0,+67/-56,0.408,23.87,14.08,15.359,2046.25,1.329,✔️,0.0,False,GPU,model,,False,TabPFN-2.5 License v1.1 (non-commercial)
+13,🧠⚡,Foundation Model,[RealTabPFN-2.5 (default)](https://arxiv.org/abs/2511.08667),1524.0,+54/-51,0.403,24.76,16.42,15.635,5.76,0.794,✔️,0.0,False,GPU,model,,False,TabPFN-2.5 License v1.1 (non-commercial)
+14,🧠⚡,Foundation Model,[TabDPT-1.3 (default)](https://github.com/layer6ai-labs/TabDPT-inference/releases/tag/v1.3.0),1514.0,+77/-57,0.405,25.52,12.58,16.409,0.62,0.172,✔️,0.0,False,GPU,model,,True,Apache-2.0
+15,🧠🔁,Neural Network,[RealMLP (tuned + ensembled)](https://arxiv.org/abs/2407.04491),1463.0,+51/-38,0.285,29.76,19.98,17.395,2879.46,12.484,✔️,0.0,False,GPU,model,,True,Apache-2.0
+16,🧠🔁,Neural Network,[TabM (tuned + ensembled)](https://arxiv.org/abs/2410.24210),1443.0,+52/-41,0.249,31.6,20.72,18.29,2168.86,2.347,✔️,0.0,False,GPU,model,,True,Apache-2.0
+17,🧠⚡,Foundation Model,[TabDPT-Turbo (default)](https://openreview.net/pdf?id=Y00pwFyrHR),1416.0,+73/-55,0.272,34.02,19.93,18.778,1.94,0.19,➖,0.0,False,GPU,model,,True,Apache-2.0
+18,🌳,Tree-based,[LightGBM (tuned + ensembled)](https://papers.nips.cc/paper_files/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html),1415.0,+48/-31,0.182,34.15,26.49,19.057,382.09,1.487,✔️,0.0,False,CPU,model,,True,MIT
+19,🧠⚡,Foundation Model,[TabICL (default)](https://arxiv.org/abs/2502.05564) [5.26% IMPUTED],1405.0,+50/-56,0.252,35.1,23.57,19.22,8.68,1.742,✔️,5.26,True,GPU,model,,True,BSD-3-Clause
+20,🌳,Tree-based,[CatBoost (tuned + ensembled)](https://arxiv.org/abs/1706.09516),1399.0,+53/-44,0.187,35.64,21.46,18.688,1107.0,0.329,✔️,0.0,False,CPU,model,,True,Apache-2.0
+21,🧠🔁,Neural Network,[TabM (tuned)](https://arxiv.org/abs/2410.24210),1395.0,+48/-43,0.202,36.04,22.87,19.113,2168.86,0.258,✔️,0.0,False,GPU,model,,True,Apache-2.0
+22,🧠⚡,Foundation Model,[LimiX (default)](https://arxiv.org/abs/2509.03505),1393.0,+83/-72,0.288,36.2,17.66,19.053,18.41,4.667,➖,0.0,False,GPU,model,,False,LimiX Model License (commercial use needs authorization)
+23,🧠🔁,Neural Network,[RealMLP (tuned)](https://arxiv.org/abs/2407.04491),1393.0,+52/-43,0.193,36.21,22.76,18.765,2879.46,0.598,✔️,0.0,False,GPU,model,,True,Apache-2.0
+24,🧠⚡,Foundation Model,[TabDPT (tuned + ensembled)](https://arxiv.org/abs/2410.18164),1393.0,+69/-47,0.222,36.24,21.92,18.823,4941.98,307.735,✔️,0.0,False,GPU,model,,True,Apache-2.0
+25,🧠⚡,Foundation Model,[iLTM (tuned + ensembled)](https://arxiv.org/abs/2511.15941),1390.0,+46/-40,0.175,36.53,26.54,19.097,12597.42,502.448,✔️,0.0,False,GPU,model,,True,Apache-2.0
+26,🌳,Tree-based,[CatBoost (tuned)](https://arxiv.org/abs/1706.09516),1390.0,+50/-40,0.174,36.53,21.56,18.938,1107.0,0.038,✔️,0.0,False,CPU,model,,True,Apache-2.0
+27,🌳,Tree-based,[CatBoost (default)](https://arxiv.org/abs/1706.09516),1376.0,+44/-43,0.174,37.9,20.85,19.276,5.41,0.026,✔️,0.0,False,CPU,model,,True,Apache-2.0
+28,🌳,Tree-based,[LightGBM (tuned)](https://papers.nips.cc/paper_files/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html),1374.0,+38/-33,0.125,38.08,30.65,19.726,382.09,0.254,✔️,0.0,False,CPU,model,,True,MIT
+29,🌳,Tree-based,[CTBoost (tuned + ensembled)](https://github.com/captnmarkus/ctboost),1373.0,+51/-56,0.179,38.2,23.32,19.879,1275.41,0.485,✔️,0.0,False,CPU,model,,True,Apache-2.0
+30,🌳,Tree-based,[ChimeraBoost (tuned + ensembled)](https://github.com/bbstats/chimeraboost),1372.0,+53/-56,0.183,38.25,21.99,19.96,521.37,0.486,✔️,0.0,False,CPU,model,,True,Apache-2.0
+31,🌳,Tree-based,[XGBoost (tuned + ensembled)](https://arxiv.org/abs/1603.02754),1364.0,+45/-46,0.144,39.04,29.18,19.837,685.87,1.454,✔️,0.0,False,CPU,model,,True,Apache-2.0
+32,🧠⚡,Foundation Model,[BetaTabPFN (default)](https://arxiv.org/abs/2502.02527),1361.0,+47/-46,0.189,39.37,26.02,21.087,282.82,1.886,➖,0.0,False,GPU,model,,True,
+33,🧠🔁,Neural Network,[ModernNCA (tuned)](https://arxiv.org/abs/2407.03257),1350.0,+52/-37,0.142,40.42,23.14,20.065,4880.28,0.525,✔️,0.0,False,GPU,model,,True,MIT
+34,🧠⚡,Foundation Model,[Mitra (default)](https://arxiv.org/abs/2510.21204) [31.58% IMPUTED],1350.0,+75/-80,0.272,40.43,20.91,21.212,121.93,2.774,✔️,31.58,True,GPU,model,,True,Apache-2.0
+35,🧠⚡,Foundation Model,[TabPFNv2 (tuned + ensembled)](https://www.nature.com/articles/s41586-024-08328-6) [31.58% IMPUTED],1349.0,+87/-71,0.262,40.5,20.57,21.03,3009.72,20.842,✔️,31.58,True,GPU,model,,True,
+36,🧠🔁,Neural Network,[ModernNCA (tuned + ensembled)](https://arxiv.org/abs/2407.03257),1347.0,+74/-69,0.189,40.68,25.57,20.171,4880.28,8.736,✔️,0.0,False,GPU,model,,True,MIT
+37,🌳,Tree-based,[ChimeraBoost (tuned)](https://github.com/bbstats/chimeraboost),1345.0,+54/-56,0.155,40.88,26.26,20.437,521.37,0.048,✔️,0.0,False,CPU,model,,True,Apache-2.0
+38,🌳,Tree-based,[CTBoost (tuned)](https://github.com/captnmarkus/ctboost),1344.0,+46/-52,0.142,41.05,29.41,20.465,1275.41,0.053,✔️,0.0,False,CPU,model,,True,Apache-2.0
+39,🌳,Tree-based,[XGBoost (tuned)](https://arxiv.org/abs/1603.02754),1339.0,+39/-38,0.111,41.5,32.45,20.196,685.87,0.205,✔️,0.0,False,CPU,model,,True,Apache-2.0
+40,🧠⚡,Foundation Model,[TabDPT (tuned)](https://arxiv.org/abs/2410.18164),1339.0,+61/-50,0.179,41.55,24.62,20.139,4941.98,41.595,✔️,0.0,False,GPU,model,,True,Apache-2.0
+41,🧠⚡,Foundation Model,[TabSwift (default)](https://github.com/LAMDA-Tabular/TabSwift),1336.0,+54/-57,0.185,41.83,29.1,20.835,0.63,0.057,➖,0.0,False,GPU,model,,True,Apache-2.0 (weights); MIT (code)
+42,❓,Other,[xRFM (tuned + ensembled)](https://arxiv.org/abs/2508.10053),1317.0,+50/-47,0.14,43.7,28.06,20.999,934.27,3.062,✔️,0.0,False,GPU,model,,True,MIT
+43,🌳,Tree-based,[ChimeraBoost (default)](https://github.com/bbstats/chimeraboost),1316.0,+53/-65,0.145,43.77,28.72,21.296,2.75,0.051,✔️,0.0,False,CPU,model,,True,Apache-2.0
+44,🧠🔁,Neural Network,[TabM (default)](https://arxiv.org/abs/2410.24210),1304.0,+52/-43,0.125,45.01,30.22,21.277,6.85,0.246,✔️,0.0,False,GPU,model,,True,Apache-2.0
+45,🌳,Tree-based,[EBM (tuned + ensembled)](https://www.cs.cornell.edu/~yinlou/papers/lou-kdd13.pdf),1302.0,+39/-38,0.083,45.24,34.71,21.779,1499.05,0.15,✔️,0.0,False,CPU,model,,True,MIT
+46,🧠⚡,Foundation Model,[TabPFNv2 (tuned)](https://www.nature.com/articles/s41586-024-08328-6) [31.58% IMPUTED],1301.0,+68/-76,0.206,45.32,23.76,22.62,3009.72,0.514,✔️,31.58,True,GPU,model,,True,
+47,🧠🔁,Neural Network,[TorchMLP (tuned + ensembled)](https://arxiv.org/abs/2003.06505),1298.0,+41/-39,0.093,45.62,36.48,20.99,2389.47,2.157,✔️,0.0,False,CPU,model,,True,Apache-2.0
+48,🧠⚡,Foundation Model,[SAP-RPT-OSS (default)](https://arxiv.org/abs/2506.10707),1289.0,+53/-68,0.162,46.52,19.91,22.559,13.7,2.033,➖,0.0,False,GPU,model,,False,Apache-2.0 (weights stated research-only)
+49,🧠⚡,Foundation Model,[iLTM (tuned)](https://arxiv.org/abs/2511.15941),1286.0,+41/-38,0.074,46.88,32.73,21.5,12597.42,70.851,✔️,0.0,False,GPU,model,,True,Apache-2.0
+50,❓,Other,[xRFM (tuned)](https://arxiv.org/abs/2508.10053),1280.0,+55/-58,0.104,47.44,29.65,22.279,934.27,0.169,✔️,0.0,False,GPU,model,,True,MIT
+51,🧠⚡,Foundation Model,[TabPFNv2 (default)](https://www.nature.com/articles/s41586-024-08328-6) [31.58% IMPUTED],1278.0,+70/-78,0.185,47.64,24.27,23.263,3.37,0.315,✔️,31.58,True,GPU,model,,True,
+52,🌳,Tree-based,[EBM (tuned)](https://www.cs.cornell.edu/~yinlou/papers/lou-kdd13.pdf),1268.0,+42/-39,0.056,48.62,37.98,22.437,1499.05,0.017,✔️,0.0,False,CPU,model,,True,MIT
+53,🧠⚡,Foundation Model,[TabDPT (default)](https://arxiv.org/abs/2410.18164),1262.0,+61/-54,0.133,49.29,30.47,22.832,49.21,43.824,✔️,0.0,False,GPU,model,,True,Apache-2.0
+54,🧠🔁,Neural Network,[FastaiMLP (tuned + ensembled)](https://arxiv.org/abs/2003.06505),1251.0,+59/-64,0.091,50.38,33.04,22.796,618.96,4.766,✔️,0.0,False,CPU,model,,True,Apache-2.0
+55,🌳,Tree-based,[EBM (default)](https://www.cs.cornell.edu/~yinlou/papers/lou-kdd13.pdf),1246.0,+41/-49,0.057,50.91,35.33,23.374,5.72,0.017,✔️,0.0,False,CPU,model,,True,MIT
+56,🧠🔁,Neural Network,[ModernNCA (default)](https://arxiv.org/abs/2407.03257),1243.0,+41/-44,0.058,51.17,31.16,23.697,14.78,0.346,✔️,0.0,False,GPU,model,,True,MIT
+57,❓,Other,[APLR (tuned + ensembled)](https://github.com/ottenbreit-data-science/aplr),1239.0,+45/-54,0.07,51.58,40.05,23.507,1446.05,0.915,✔️,0.0,False,CPU,model,,True,MIT
+58,🌳,Tree-based,[CTBoost (default)](https://github.com/captnmarkus/ctboost),1235.0,+58/-65,0.107,51.99,31.96,23.873,5.82,0.04,✔️,0.0,False,CPU,model,,True,Apache-2.0
+59,🧠🔁,Neural Network,[RealMLP (default)](https://arxiv.org/abs/2407.04491),1231.0,+38/-37,0.033,52.34,38.68,22.944,10.48,1.707,✔️,0.0,False,GPU,model,,True,Apache-2.0
+60,🌳,Tree-based,[XGBoost (default)](https://arxiv.org/abs/1603.02754),1224.0,+42/-44,0.044,53.03,44.0,22.777,1.77,0.117,✔️,0.0,False,CPU,model,,True,Apache-2.0
+61,🧠🔁,Neural Network,[TorchMLP (tuned)](https://arxiv.org/abs/2003.06505),1221.0,+47/-38,0.046,53.3,41.13,22.946,2389.47,0.152,✔️,0.0,False,CPU,model,,True,Apache-2.0
+62,🌳,Tree-based,[ExtraTrees (tuned + ensembled)](https://link.springer.com/article/10.1007/s10994-006-6226-1),1205.0,+56/-52,0.064,54.87,37.01,23.753,286.48,0.764,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+63,❓,Other,[APLR (tuned)](https://github.com/ottenbreit-data-science/aplr),1194.0,+48/-59,0.044,55.92,43.43,24.714,1446.05,0.067,✔️,0.0,False,CPU,model,,True,MIT
+64,🧠🔁,Neural Network,[FastaiMLP (tuned)](https://arxiv.org/abs/2003.06505),1188.0,+56/-65,0.035,56.52,38.0,24.472,618.96,0.298,✔️,0.0,False,CPU,model,,True,Apache-2.0
+65,🌳,Tree-based,[LightGBM (default)](https://papers.nips.cc/paper_files/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html),1186.0,+49/-42,0.035,56.71,47.75,23.683,1.79,0.12,✔️,0.0,False,CPU,model,,True,MIT
+66,🌳,Tree-based,[RandomForest (tuned + ensembled)](https://link.springer.com/article/10.1023/A:1010933404324),1180.0,+63/-64,0.065,57.32,34.97,24.752,323.8,0.743,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+67,🌳,Tree-based,[ExtraTrees (tuned)](https://link.springer.com/article/10.1007/s10994-006-6226-1),1179.0,+61/-60,0.055,57.38,33.31,24.682,286.48,0.073,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+68,🌳,Tree-based,[RandomForest (tuned)](https://link.springer.com/article/10.1023/A:1010933404324),1147.0,+65/-66,0.043,60.41,32.25,25.517,323.8,0.076,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+69,🧠⚡,Foundation Model,[iLTM (default)](https://arxiv.org/abs/2511.15941),1147.0,+55/-56,0.034,60.41,40.38,25.989,262.93,64.506,✔️,0.0,False,GPU,model,,True,Apache-2.0
+70,❓,Other,[APLR (default)](https://github.com/ottenbreit-data-science/aplr),1140.0,+57/-65,0.028,60.99,50.09,27.069,5.25,0.054,✔️,0.0,False,CPU,model,,True,MIT
+71,🧠⚡,Foundation Model,[TabSTAR (tuned)](https://arxiv.org/abs/2505.18125),1134.0,+72/-92,0.106,61.57,19.55,27.735,29479.47,4.088,✔️,0.0,False,GPU,model,,True,MIT (code); CC-BY-4.0 (weights)
+72,🧠⚡,Foundation Model,[TabSTAR (tuned + ensembled)](https://arxiv.org/abs/2505.18125),1130.0,+71/-90,0.102,61.93,18.81,27.808,29479.47,18.315,✔️,0.0,False,GPU,model,,True,MIT (code); CC-BY-4.0 (weights)
+73,🧠⚡,Foundation Model,[OrionMSP (default)](https://arxiv.org/abs/2511.02818),1116.0,+61/-64,0.054,63.19,46.12,27.817,16.32,2.859,➖,0.0,False,GPU,model,,True,MIT
+74,🧠🔁,Neural Network,[TorchMLP (default)](https://arxiv.org/abs/2003.06505),1088.0,+42/-53,0.005,65.58,51.41,26.968,6.83,0.147,✔️,0.0,False,CPU,model,,True,Apache-2.0
+75,📏,Baseline,[Linear (tuned + ensembled)](https://scikit-learn.org/stable/modules/linear_model.html),1070.0,+91/-90,0.044,67.04,41.16,31.92,1278.75,0.384,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+76,🌳,Tree-based,[PerpetualBooster (tuned + ensembled)](https://perpetual-ml.com/),1066.0,+57/-60,0.02,67.33,54.13,32.268,187.03,0.955,✔️,0.0,False,CPU,model,,True,Apache-2.0
+77,🧠🔁,Neural Network,[FastaiMLP (default)](https://arxiv.org/abs/2003.06505),1044.0,+69/-72,0.007,69.06,49.91,29.084,2.91,0.368,✔️,0.0,False,CPU,model,,True,Apache-2.0
+78,🌳,Tree-based,[PerpetualBooster (tuned)](https://perpetual-ml.com/),1033.0,+54/-57,0.01,69.87,51.73,33.645,187.03,0.338,✔️,0.0,False,CPU,model,,True,Apache-2.0
+79,🧠⚡,Foundation Model,[TabSTAR (default)](https://arxiv.org/abs/2505.18125),1031.0,+83/-114,0.068,70.04,29.24,33.15,439.45,5.883,✔️,0.0,False,GPU,model,,True,MIT (code); CC-BY-4.0 (weights)
+80,📏,Baseline,[Linear (tuned)](https://scikit-learn.org/stable/modules/linear_model.html),1027.0,+89/-97,0.03,70.32,43.61,32.948,1278.75,0.059,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+81,📏,Baseline,[KNN (tuned + ensembled)](https://scikit-learn.org/stable/modules/neighbors.html),1025.0,+72/-88,0.016,70.47,47.12,31.555,139.88,3.615,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+82,🧠⚡,Foundation Model,[TabFlex (default)](https://arxiv.org/abs/2506.05584),1013.0,+80/-100,0.037,71.33,48.7,33.005,1.11,0.189,➖,0.0,False,GPU,model,,True,
+83,❓,Other,[xRFM (default)](https://arxiv.org/abs/2508.10053),1009.0,+68/-86,0.018,71.61,63.15,32.191,3.61,0.938,✔️,0.0,False,GPU,model,,True,MIT
+84,🌳,Tree-based,[RandomForest (default)](https://link.springer.com/article/10.1023/A:1010933404324),1000.0,+58/-64,0.003,72.24,65.39,31.221,0.38,0.037,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+85,🌳,Tree-based,[ExtraTrees (default)](https://link.springer.com/article/10.1007/s10994-006-6226-1),992.0,+73/-73,0.007,72.75,65.4,31.217,1.68,0.295,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+86,📏,Baseline,[Linear (default)](https://scikit-learn.org/stable/modules/linear_model.html),937.0,+82/-105,0.015,76.21,54.77,37.028,2.72,0.083,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+87,🌳,Tree-based,[PerpetualBooster (default)](https://perpetual-ml.com/),929.0,+60/-79,0.0,76.66,55.32,37.682,26.07,0.041,✔️,0.0,False,CPU,model,,True,Apache-2.0
+88,📏,Baseline,[KNN (tuned)](https://scikit-learn.org/stable/modules/neighbors.html),913.0,+82/-113,0.005,77.56,55.99,37.225,139.88,0.193,✔️,0.0,False,CPU,model,,True,BSD-3-Clause
+89,📏,Baseline,[KNN (default)](https://scikit-learn.org/stable/modules/neighbors.html),579.0,+110/-114,0.0,87.73,83.75,52.194,0.18,0.029,✔️,0.0,False,CPU,model,,True,BSD-3-Clause

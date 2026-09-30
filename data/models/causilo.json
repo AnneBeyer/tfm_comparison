@@ -1,0 +1,232 @@
+{
+  "id": "causilo",
+  "name": "Causilo",
+  "tabarena_entry": "Causilo (default)",
+  "family": "Causilo",
+  "developer": "Nums AI Inc. (Seoul, South Korea; contributors Minyong Cho, Minho Jeong, Dooho Lee, Jinmo Lee, Jaemin Yoo)",
+  "organization_type": "company",
+  "release_date": "2026-09-13",
+  "paper_title": "Causilo Technical Report",
+  "links": {
+    "paper": "https://arxiv.org/abs/2609.22866",
+    "code": "https://github.com/nums-ai/causilo",
+    "weights": "https://huggingface.co/nums-ai/causilo",
+    "docs": "https://github.com/nums-ai/causilo/blob/main/docs/inference.md",
+    "pypi": "https://pypi.org/project/causilo/",
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/536"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": false,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights are ungated safetensors on Hugging Face (classifier/ and regressor/ folders, pinned by the package to HF revision 94f2bd91); `pip install causilo` (v1.0.0 2026-09-13, v1.0.1 2026-09-14, v1.0.2 2026-09-17; Python 3.10-3.12, PyTorch >= 2.13, Linux classifier) downloads them on first fit. The repository contains inference code only ('There is no training loop or forward method' in model.py); no pretraining code, no synthetic-data generator and no fine-tuning recipe are released. No API product: Nums AI offers a Gradio demo Space (nums-ai/causilo-tabular-demo, ZeroGPU A10G, 'In-context tabular prediction from a CSV') and invites commercial contact via contact@nums.world; the weights license forbids third parties from offering the model as a hosted/API/SaaS service. Runs on CPU or a single CUDA device."
+  },
+  "license": {
+    "code": "Apache-2.0",
+    "weights": "Causilo License v1.0 (custom, non-commercial; Hugging Face metadata: license 'other', license_name 'causilo-1.0')",
+    "prior_or_data": "not released (no synthetic-data generator or training data published; no separate license)",
+    "commercial_use": "no",
+    "non_commercial_use": "yes",
+    "notes": "Code (GitHub repo, PyPI wheel) is Apache-2.0 (LICENSE file, 'Copyright 2026 Nums AI Inc.'; PyPI license_expression Apache-2.0). Weights are under the Causilo License v1.0 (full text at huggingface.co/nums-ai/causilo/blob/main/LICENSE): a royalty-free, non-transferable, non-sublicensable licence to use, copy, modify and create derivatives 'for Non-Commercial Purposes' only. 'Non-Commercial Purpose' = research, testing, evaluation or experimentation 'not directed toward commercial gain, revenue generation, commercial product development, business decision-making, client deliverables, or production deployment' (institutional affiliation, salaries and grants do not make research commercial). Sec. 2(b): commercial or production use of the Model, Derivatives OR OUTPUTS, including training/fine-tuning/distilling models for commercial use, 'requires a separate license from Company'. Sec. 2(e): providing the model or derivatives as a hosted, managed, API or SaaS service, 'whether paid or free', requires a separate licence. Sec. 2(c): scholarly papers and research results (incl. outputs) may be published without adopting the licence. Sec. 3: free research redistribution of copies and derivatives is allowed (include licence and notices, mark modifications, no charge, no bundling). Derivatives include fine-tuned/quantized/pruned versions, LoRA adapters, weight deltas and models distilled from outputs. Automatic termination on breach with a 30-day cure period. The report's own text (Sec. 4) matches this summary. The TabArena leaderboard therefore flags Causilo with '$' = 'license does not permit commercial use' (tabarena metadata: commercial_use=False, license='Causilo License v1.0 (non-commercial weights)'). The arXiv report itself is CC BY-NC-SA 4.0."
+  },
+  "architecture": {
+    "type": "column-then-row in-context-learning transformer (TabICL-style) with an additional row-refinement module and a second column stage before row compression; all column and row stages use cross-attention through a fixed number of inducing/summary tokens",
+    "parameters_m": 36.08,
+    "parameters_note": "36.08M parameters (classification checkpoint) and 37.08M (regression checkpoint) as stated in the report (Fig. 1, Sec. 1). Independently verified by summing module shapes from the Hugging Face config.json (36,075,834 / 37,083,799) and by the fp32 safetensors sizes (144.4 MB / 148.4 MB). About 32.2M parameters sit in the 12-layer, width-512 ICL transformer; the two checkpoints differ only in the target embeddings and the output head (10 logits vs. 999 regression channels). Report: roughly one-sixth of TabPFN-3.5 (218.98M) and one-eleventh of LimiX-2 (406.2M).",
+    "layers": "3 column-encoder layers + 3 row-refinement layers (2 broadcast/gather rounds + final broadcast) + 3 column-refinement layers (independent parameters) + 3 row-compression layers + 12 ICL transformer layers (L=12); config.json: column_depths [3, 3], row_depths [3, 3], prediction_depth 12",
+    "embedding_dim": 128,
+    "attention_heads": "4 heads in column stages (head width 32), 8 heads in row stages (head width 16), 4 heads in the ICL transformer (width 512, head width 128)",
+    "attention_scheme": "Cell tokens (one per group of 3 features, d=128) are processed in four stages before a fixed-width row embedding is formed. (1) Column encoding: Set-Transformer inducing-token attention per column — M=128 learned inducing tokens gather from the context (training) cell tokens only, then all context and query cell tokens read from the resulting summaries ('gather/broadcast'); query rows never enter the summaries, so cost is linear in rows and the summaries can be cached as K/V. (2) Row refinement: K=4 temporary summary tokens per row alternate a broadcast (cells attend to summaries) and a gather (summaries attend to updated cells); summaries persist across the refinement layers and are discarded after the final broadcast. (3) Column refinement: a second column stage with independent parameters so row-enriched cells revisit the context. (4) Row compression: a separate set of K=4 learned summary tokens attends to [cells; summaries] over 3 layers while the cells stay fixed; the summaries are RMS-normalised and concatenated into a Kd=512 row embedding. (5) ICL transformer: 12 layers over row embeddings (context targets embedded and added); context rows attend to each other, query rows attend only to context rows (training K/V prefix); queries and keys are per-head RMS-normalised. All attention uses pre-RMSNorm, residual connections and SwiGLU feed-forward blocks (expansion 2). Query scaling is a bounded variant of TabICLv2's query-aware scalable softmax (QASSMax): multiplier = Bound_8(f(log n)) * Bound_2(m(log n)) * Bound_2(g(q)) with Bound_L(z)=exp((log L) tanh(z/log L)), so the total gain stays within [1/32, 32] and positive; f and g are 2-layer MLPs with 64 GELU hidden units, the length-correction net m has 16 tanh hidden units (applied in column-gather, row and ICL attention; column broadcast attention is unscaled). Attention cost per forward pass O((Ns+Nq)G + Ns(Ns+Nq)) for Ns context rows, Nq query rows and G feature groups; the microbenchmark (16 rows, 2^4-2^16 features) gives a feature-scaling exponent beta=1.23 vs. 1.90-1.99 for TabFM, Mitra-v2, TabPFN-3.5, TabICLv2 and EXAONE-Tabular.",
+    "checkpoints": "separate classification & regression",
+    "regression_head": "999 output channels treated as native quantiles at levels 0.001-0.999: after a 2-layer GELU head (RMSNorm -> Linear 512->1024 -> GELU -> Linear 1024->999, evaluated in FP32), each ensemble member's channels are sorted, mapped back to the original target scale (targets are standardised with a StandardScaler in float64) and averaged across members. Default point prediction = mean of the sorted channels; 'median', arbitrary 'quantiles' (linear interpolation between native levels, exponential tail extrapolation) and 'raw' (all 999 quantiles) are available since v1.0.1. Classification head: same 2-layer GELU head to 10 logits (native 10-class head).",
+    "feature_embedding": "Features are partitioned into non-overlapping groups of three adjacent features (zero-padded). Each observed scalar is encoded with sine and cosine features at 16 learned frequencies (inspired by TabFM), the frequencies and the missing-value embeddings being specific to the position within the group, followed by a shared linear projection to d=128; the three per-feature signals are summed and scaled by sqrt(3) to give one cell token per feature group and row. Missing values (NaN, and categories unseen at fit time) use learned embeddings. Categorical columns are ordinal-encoded (scikit-learn OrdinalEncoder) and constant columns are removed before the encoder. For context rows a target embedding (one-hot classes or standardised scalar) is added to every cell token, and a second target embedding is added to the 512-d context row embeddings before the ICL transformer. Feature normalisation (standardise / rank-to-Gaussian / robust / power, then 4-sigma arcsinh tail compression) is fitted on the context set and varied across ensemble members.",
+    "key_innovations": [
+      "'Refine first, compress later': a row-refinement module (within-row information exchange via K=4 temporary summary tokens) and a second, independently parameterised column stage let cell tokens revisit the context set before they are compressed into row embeddings, unlike TabICL/TabICLv2/TabPFN-3, where cells are compressed right after column encoding.",
+      "Linear feature scaling by construction: both row stages use cross-attention through a fixed number of summary tokens instead of full self-attention among cell tokens, giving O(K(G+K)) rather than O((G+K)^2) per row; measured scaling exponent beta=1.23 vs. ~1.9-2.0 for TabFM, Mitra-v2, TabPFN-3.5, TabICLv2 and EXAONE-Tabular.",
+      "Bounded QASSMax: TabICLv2's query-aware scalable softmax with the length-dependent and query-dependent gains passed through a tanh-in-log-space bound (L=8 and L=2), plus a small extra length-correction network (bound 2) 'to accommodate context lengths that may differ from those seen during pretraining'; total multiplier in [1/32, 32].",
+      "Inducing-token (Set Transformer) column attention over context rows only, so column summaries and ICL-layer K/V of the training context can be cached (use_kv_cache) for fast repeated prediction.",
+      "Small model (36-37M parameters) on the TabArena Pareto frontier: 1785.4 Elo at 0.1043 s per 1K test samples, faster than TabICLv2 and TabPFN-3.5-Fast with higher Elo than TabFM.",
+      "Deterministic ensembling recipe: 4 normalisation schemes x coprime-stride ring feature permutations (which change the feature triples grouped into one token) x cyclic class-label shifts, all seeded (random_state=42).",
+      "999-channel quantile-style regression head giving mean, median and arbitrary quantile predictions; deterministic error-correcting output codes extend the 10-class head to any number of classes (v1.0.2)."
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 10,
+    "max_classes_note": "Native 10-class head (config outputs=10). Since v1.0.2 (2026-09-17) datasets with more than 10 classes are handled automatically through deterministic error-correcting output codes (ECOC: one in-context fit per code row over the same checkpoint, log-probabilities accumulated per class; balanced active/rest codes searched for <=200 classes, partition codes above), so there is no hard cap; v1.0.0 (used for the first TabArena run) rejected >10 classes. The current TabArena wrapper (causilo==1.0.2) declares no max_classes.",
+    "max_features": null,
+    "max_features_note": "No documented hard limit. Row-stage attention cost is linear in the number of features; the report's microbenchmark runs up to 2^16 features (16 rows). Features are grouped in triples (zero-padded), so the token grid has ceil(F/3) columns. Wide TabArena datasets (Bioresponse, hiva_agnostic, kddcup09_appetency, QSAR-TID-11) triggered the library's memory-adaptive chunk-shrinking retry loop but completed.",
+    "max_samples": null,
+    "max_samples_note": "No documented limit and no subsampling: all training rows are used as context in one pass ('All training rows and ensemble members are preserved'). ICL-transformer attention is quadratic in context rows (column stages are linear thanks to 128 inducing tokens); memory pressure is handled by reducing concurrent ensemble members, query batching and tiled column-summary recomputation, but 'a layer's full training K/V must still fit on the device' (no CPU offloading). All 51 TabArena datasets (up to ~150k rows; GiveMeSomeCredit was the longest fit at ~130 s on an RTX PRO 6000) ran without failure. The authors mention planned 'optimizations for larger datasets' before submitting to BeyondArena.",
+    "missing_values": "native",
+    "categorical_features": "Supported natively: string, boolean and pandas-categorical columns (and object columns that are not numeric) are ordinal-encoded and fed as scalars to the sinusoidal encoder; unseen categories at prediction time become NaN and use the learned missing-value embedding; numeric category codes should be passed as pandas categorical dtype; datetime/timedelta columns must be encoded by the user. Constant columns are dropped.",
+    "text_features": false,
+    "other": "Probabilistic classification (predict_proba); regression mean, median, arbitrary quantiles and all 999 native quantiles; feature NaNs supported, target NaNs rejected; single-target only; no embeddings API; K/V-cache option (use_kv_cache=True) for repeated prediction; fitted state (preprocessing + optional caches, without weights) serialisable with joblib; CPU inference in FP32, CUDA with FP16 autocast (regression column stages and both output heads in FP32); single GPU only; no fine-tuning, early stopping or validation-split APIs. No text encoder: BeyondArena datasets with text or high-cardinality categoricals were evaluated with the benchmark’s own preprocessing."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Not described. The report states only that Causilo was 'pretrained entirely on approximately 36-million synthetic tables with varying sizes and causalities' (abstract, Sec. 1), and the TabArena PR adds 'We pretrained Causilo entirely on synthetic data, without using any TabArena datasets.' Prior families (SCMs, trees, GPs, ...), causal-graph design, feature/sample/class ranges, noise models and the generator code are not published anywhere (report, repo, model card, PR, company website). The only architectural hint is that the bounded QASSMax length-correction network exists to handle 'context lengths that may differ from those seen during pretraining', implying a bounded pretraining context length that is not stated.",
+    "synthetic_prior_types": [
+      "not disclosed (report only mentions tables with 'varying sizes and causalities')"
+    ],
+    "num_synthetic_datasets": 36000000,
+    "num_synthetic_datasets_note": "'approximately 36M synthetic tables' / 'approximately 36-million synthetic tables' (report abstract and Sec. 1); whether these are distinct sampled tables or training examples seen over the run is not specified.",
+    "real_data": "none (pretrained entirely on synthetic data; no real-data fine-tuning is mentioned; PR states no TabArena datasets were used)",
+    "objective": null,
+    "optimizer": null,
+    "training_steps": null,
+    "batch_size": null,
+    "hardware": null,
+    "compute": null,
+    "training_cost_note": "No training recipe is disclosed: the report has no pretraining section, and objective, optimizer, learning-rate schedule, steps, batch size, GPU type/count, GPU-hours and cost are absent from the report, repository, model card, PyPI page, TabArena PR and the Nums AI website. The only training-related facts are: synthetic-only pretraining on ~36M tables; classification head trained for 10 classes; regression head with 999 output channels; acknowledgement that TabICL's openly shared code/models 'informed the development of Causilo'.",
+    "curriculum": null
+  },
+  "icl": {
+    "max_context_rows": null,
+    "context_note": "No fixed context window is documented; the full training set is used as context in a single forward pass (docs/inference.md: 'Prediction uses the full training context'). The ICL transformer attends over all context rows (quadratic in Ns); the column stages summarise context rows through 128 inducing tokens (linear in Ns). The bounded QASSMax includes a length-correction network for 'context lengths that may differ from those seen during pretraining', but the pretraining context length is not disclosed. Practical limits are set by device memory (execution budget = 80% of available device memory, flattened attention batch capped at 65,535 items for CUDA kernels).",
+    "large_dataset_strategy": "No subsampling, retrieval or bagging of the context. Memory-adaptive execution instead: the library first reduces the number of ensemble members evaluated concurrently while keeping all query rows; if one member still exceeds the budget it chooses, by estimated cost, between query batching and tiled column-summary recomputation (feature groups and rows processed in tiles, compact summaries and row states kept on the device, temporary K/V retained for one layer at a time). Tile sizes adapt to available memory and CUDA OOM errors shrink the failed tiles (up to 7 retries, budget halved each time); 'a layer's full training K/V must still fit on the device; intermediate CPU offloading is not supported.' Query rows are batched independently of the context. Optional use_kv_cache=True precomputes the column summaries and ICL-layer K/V of the context during fit.",
+    "test_time_ensembling": "Default n_estimators=8 (TabArena default config, random_state=42), all members sharing the same weights. Members cycle through four feature-normalisation schemes fitted on the context set — standardisation ('none'), rank-to-Gaussian, robust scaling and power (Yeo-Johnson) transformation — each followed by smooth arcsinh compression of values beyond 4-sigma bounds; the same fitted transform is applied to queries. Feature order is permuted per member (member 0 keeps the original order; the others traverse a shared random ring of features with a stride coprime to the feature count and a random start, preferring strides whose 1- and 2-step circular distances were used least) so that different features are grouped into the same triple-token. For classification, class labels are permuted by cyclic shifts of a random class ordering so that over C members every class occupies every output slot once; member logits are restored to the original class order, averaged, then softmaxed. For regression each member's 999 channels are sorted, transformed back to the target scale and averaged across members. Ensemble members are run in batches when memory allows.",
+    "fine_tuning": "Not supported by the package (fit() only prepares the in-context context: 'No gradient training occurs'; the model class has 'no training loop or forward method') and no fine-tuning recipe or results are published. The weights licence permits creating fine-tuned derivatives for non-commercial research (they remain subject to the licence); commercial or hosted use of derivatives needs a separate licence.",
+    "inference_notes": "scikit-learn-style CausiloClassifier / CausiloRegressor (fit, predict, predict_proba; regression predict(output_type='mean'|'median'|'quantiles'|'raw')). Inputs: NumPy arrays or pandas DataFrames with categorical and missing feature values. Device 'auto' picks one CUDA device or CPU; CUDA uses FP16 mixed precision with regression column stages and both output heads in FP32, CPU uses FP32; bitwise determinism is not enforced. The checkpoint is pinned to HF revision 94f2bd91 and verified by config hash. ECOC classification (>10 classes) runs one context per code row over the same checkpoint and shares query preprocessing. Fitted estimators can be pickled with joblib (weights excluded) and restored with matching package/Python versions."
+  },
+  "speed": {
+    "hardware_note": "Repository comparison: one H100 80 GB GPU and eight physical CPU cores per job (Intel Xeon Sapphire Rapids host, ~1.73 TiB RAM), local reruns of TabICLv2 (tabicl 2.1.1) and TabPFN-3 (tabpfn 8.2.0) under the official TabArena pipeline (816 Full splits). The report's TabArena inference times are the public leaderboard's median seconds per 1K test samples (leaderboard as of 18 Sep 2026, i.e. TabArena's own timing pipeline); the TabArena maintainers' verification re-run used an RTX PRO 6000 (96 GB) GPU. The report's feature-scaling microbenchmark states only 'GPU'.",
+    "memory_note": "Mean peak usage during fit on TabArena (H100 rerun): 8.15 GiB GPU (11.73 GiB reserved) and 1.94 GiB CPU overall; classification 8.36 GiB GPU, regression 7.54 GiB GPU. Comparison in the same run: TabICLv2 8.37 GiB GPU / 2.0 GiB CPU, TabPFN-3 0.88 GiB GPU / 2.87 GiB CPU. The execution budget is 80% of the available device memory; CUDA OOMs are handled by shrinking chunks/tiles (all wide TabArena datasets recovered). use_kv_cache trades additional device memory for repeated-prediction speed.",
+    "speed_claims": "Report (TabArena leaderboard as of 18 Sep 2026): median inference 0.1043 s per 1K test samples overall (0.1096 s classification, 0.0930 s regression) at 1785.4 Elo — on the Pareto frontier and faster than every other TFM on it; exceeds TabFM in Elo with 63.8x faster inference (62.1x in classification vs. TabFM's 6.8094 s; 67.6x in regression); 22.8% (classification) / 20.1% (regression) less inference time than TabICLv2 while gaining 198 / 350 Elo; 31.6% less inference time than TabPFN-3.5-Fast overall (in regression +106 Elo with 22.2% less time); 4.49x faster than EXAONE-Tabular and 9.71x faster than Mitra-v2 in classification (6.41x in regression); TabPFN-3.5 needs 0.4727 s (4.5x) and LimiX-2 9.0278 s (86.6x) per 1K samples overall. Feature-wise forward-time scaling exponent beta=1.23 (near-linear) vs. 1.90-1.99 for TabFM, Mitra-v2, TabPFN-3.5, TabICLv2, EXAONE-Tabular. Repository H100 rerun: fit 2.504 s and predict 0.251 s per 1K rows (TabICLv2 3.449 / 0.303, TabPFN-3 4.18 / 0.686); classification 2.568 / 0.272 s, regression 1.682 / 0.212 s. ScoringBench: median ~0.3 s per test fold (fine-tuned Mitra-v2: 241.8 s), ~40% of TabPFN-3.5's inference time. TabArena leaderboard snapshot 2026-09-23: fit 0.68 s/1K, infer 0.104 s/1K (stored in data/tabarena.json).",
+    "inference_cost_note": "Free to run locally for non-commercial research (open weights, ~290 MB total). No hosted API or price list exists; commercial or production use, and any hosted/API/SaaS offering, requires a separately negotiated licence from Nums AI Inc. (contact@nums.world)."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": false,
+      "source": null,
+      "protocol_note": "TALENT is not evaluated in the technical report, repository, model card or TabArena PR.",
+      "avg_rank": null,
+      "elo": null,
+      "win_rate_vs": null,
+      "other": null
+    },
+    "other": [
+      {
+        "name": "TabArena (report, public leaderboard as of 2026-09-18, 51 datasets: 38 classification + 13 regression, Elo over the full leaderboard incl. systems)",
+        "value": "Overall 1785.4 Elo at 0.1043 s per 1K test samples (TabPFN-3.5 1861 @ 0.4727 s; LimiX-2 1943 @ 9.0278 s). Classification 1766.3 Elo @ 0.1096 s (TabFM 1766 @ 6.8094 s; TabICLv2 -198 Elo; TabPFN-3.5 1841 @ 0.5178 s; LimiX-2 1919 @ 10.0810 s; TabFM+ 1803 @ 7.7865 s). Regression 2019.3 Elo @ 0.0930 s (TabFM -47 Elo; Mitra-v2 -60; TabICLv2 -350; TabPFN-3.5-Fast -106; TabPFN-3.5 2099 @ 0.3765 s; LimiX-2 2204 @ 1.7817 s). Causilo lies on the Pareto frontier in classification, regression and combined.",
+        "source": "https://arxiv.org/abs/2609.22866"
+      },
+      {
+        "name": "TabArena Full, self-reported (README; 816 splits, default 8 estimators, seed 42, system methods excluded)",
+        "value": "Overall Elo 1792.9 (position 1, improvability 0.0684); classification 1771.8 (0.0875); regression 2032.6 (0.0125). TabArena Lite (51 splits): overall 1817.4 (0.0596), classification 1780.1 (0.0747), regression 2168.2 (0.0155).",
+        "source": "https://github.com/nums-ai/causilo#benchmarks"
+      },
+      {
+        "name": "TabArena maintainer verification re-run (BENCHMARK_LOG 2026-09-13, causilo 1.0.0, RTX PRO 6000 96 GB)",
+        "value": "#3/88 overall, Elo 1794 (+90/-58), behind only the system submissions TabFM+ and AutoGluon 1.6 (noncommercial); #1/86 multiclass, #3/85 regression, #5/86 binary; 816/816 result files, no failed task, longest single fit ~130 s (GiveMeSomeCredit). Re-run on the new timing/warm-up pipeline as suite tabarena-2026-09-16 (PR #584) with causilo==1.0.2.",
+        "source": "https://github.com/autogluon/tabarena/blob/main/packages/tabflow_slurm/BENCHMARK_LOG.md"
+      },
+      {
+        "name": "BeyondArena (report; 142 datasets incl. IID/temporal/grouped splits and text/high-cardinality features; Causilo evaluated locally against the published baselines, which go up to TabPFN-3; 29 configurations)",
+        "value": "Combined Elo 1359 (-40/+45) — rank 1, improvability 6.4%, average rank 6.2, 47.3 aggregated wins (next: RealMLP tuned+ensembled 1274, TabPFN-3 1270, TabPFN-2.6 1216, TabM T+E 1211, CatBoost T+E 1205, TabICLv2 1198). Classification Elo 1346 (TabPFN-3 1263, RealMLP 1243, TabM 1205, TabPFN-2.6 1197, TabICLv2 1194, CatBoost 1193); regression Elo 1394 (RealMLP 1357, TabPFN-3 1294, TabPFN-2.6 1265). Subgroups: binary 1323, multiclass 1424 (TabPFN-3 trails by 84/83); IID 1434 vs 1341; numerical 1408 vs 1303; <=100 features 1403 vs 1332; high-dimensional 1248 vs RealMLP 1217; grouped classification (11 datasets) 1225 — best TFM but behind TabM 1283, RealMLP 1282 and LightGBM 1228; regression leads IID/numerical/text subgroups by 147/98/188 Elo; grouped regression (7 datasets) 1238, 130 Elo behind RealMLP and below TabM, LightGBM, CatBoost.",
+        "source": "https://arxiv.org/abs/2609.22866"
+      },
+      {
+        "name": "ScoringBench (report; regression point + distributional prediction)",
+        "value": "Pareto-optimal (metric-specific Elo vs. median inference time per test fold) on RMSE, R^2, MAE and CRPS at ~0.3 s per fold; higher Elo than TabPFN-3.5-Fast on all four metrics with ~40% of TabPFN-3.5's inference time; TabPFN-3.5 has the highest Elo at higher latency; fine-tuned Mitra-v2 slightly higher CRPS Elo at 241.8 s per fold; beats TabLDM on MAE. Exact Elo values are shown only in Figure 9 (not in the text).",
+        "source": "https://arxiv.org/abs/2609.22866"
+      },
+      {
+        "name": "Feature-scaling GPU microbenchmark (report, Fig. 3)",
+        "value": "Forward time of the first row-mixing block vs. feature count (16 rows, F = 2^4 ... 2^16, median of 50 CUDA-event timings): fitted exponent beta = 1.23 for Causilo vs. 1.90-1.99 for TabFM, Mitra-v2, TabPFN-3.5, TabICLv2 and EXAONE-Tabular.",
+        "source": "https://arxiv.org/html/2609.22866"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "First release (Causilo 1.0, September 2026) — there is no earlier Causilo model. Relative to TabICL / TabICLv2, whose column-then-row design it follows and whose authors it credits: (1) an extra row-refinement module plus a second column stage before row compression, so cell tokens revisit the context after within-row mixing; (2) cross-attention through K=4 summary tokens instead of full self-attention among cell tokens in both row stages (linear instead of quadratic in the number of features; beta 1.23 vs ~1.9-2.0); (3) bounded QASSMax (gains constrained to [1/32, 32]) with an added length-correction network; (4) TabFM-style learned sinusoidal scalar encoding with three features fused into one token; (5) separate classification (10-class) and regression (999-quantile-channel) checkpoints of 36.08M / 37.08M parameters; (6) reported TabArena gains of +198 Elo (classification) and +350 Elo (regression) over TabICLv2 at ~20% lower inference time. Package history: 1.0.0 (2026-09-13, <=10 classes), 1.0.1 (2026-09-14, median/quantile regression outputs), 1.0.2 (2026-09-17, ECOC for >10 classes, tiled column-summary recomputation for large inputs, power-normalisation overflows kept as NaN).",
+  "sources": [
+    {
+      "title": "Causilo Technical Report (arXiv:2609.22866, abstract page; submitted 19 Sep 2026)",
+      "url": "https://arxiv.org/abs/2609.22866"
+    },
+    {
+      "title": "Causilo Technical Report (arXiv HTML full text, v1)",
+      "url": "https://arxiv.org/html/2609.22866"
+    },
+    {
+      "title": "nums-ai/causilo GitHub repository (README: install, options, benchmarks, license)",
+      "url": "https://github.com/nums-ai/causilo"
+    },
+    {
+      "title": "Causilo code LICENSE (Apache License 2.0, Copyright 2026 Nums AI Inc.)",
+      "url": "https://github.com/nums-ai/causilo/blob/main/LICENSE"
+    },
+    {
+      "title": "Causilo docs/inference.md (regression outputs, precision, large-input handling, restoration)",
+      "url": "https://github.com/nums-ai/causilo/blob/main/docs/inference.md"
+    },
+    {
+      "title": "Causilo docs/benchmarks/README.md (H100 resource comparison) and provenance.json",
+      "url": "https://github.com/nums-ai/causilo/blob/main/docs/benchmarks/README.md"
+    },
+    {
+      "title": "Causilo source: model.py / checkpoints.py / nn/ / execution/ / data/ (architecture config, pinned HF revision, memory policy, ensembling)",
+      "url": "https://github.com/nums-ai/causilo/tree/main/src/causilo"
+    },
+    {
+      "title": "GitHub release v1.0.2 (ECOC >10 classes, tiled recomputation)",
+      "url": "https://github.com/nums-ai/causilo/releases/tag/v1.0.2"
+    },
+    {
+      "title": "GitHub release v1.0.1 (median/quantile regression predictions)",
+      "url": "https://github.com/nums-ai/causilo/releases/tag/v1.0.1"
+    },
+    {
+      "title": "Hugging Face model card nums-ai/causilo (license: other / causilo-1.0; files; licence summary)",
+      "url": "https://huggingface.co/nums-ai/causilo"
+    },
+    {
+      "title": "Causilo License v1.0 (model weights licence, full text)",
+      "url": "https://huggingface.co/nums-ai/causilo/blob/main/LICENSE"
+    },
+    {
+      "title": "Hugging Face classifier/config.json (width 128, expansion 2, group_size 3, frequencies 16, column_latents 128, column_heads 4, column_depths [3,3], row_heads 8, row_latents 4, row_depths [3,3], prediction_heads 4, prediction_depth 12, outputs 10)",
+      "url": "https://huggingface.co/nums-ai/causilo/blob/main/classifier/config.json"
+    },
+    {
+      "title": "Hugging Face regressor/config.json (same, outputs 999)",
+      "url": "https://huggingface.co/nums-ai/causilo/blob/main/regressor/config.json"
+    },
+    {
+      "title": "Hugging Face API (file sizes: classifier 144,385,448 B, regressor 148,417,316 B; created 2026-09-11; demo Space nums-ai/causilo-tabular-demo)",
+      "url": "https://huggingface.co/api/models/nums-ai/causilo"
+    },
+    {
+      "title": "PyPI: causilo (1.0.0 2026-09-13, 1.0.1 2026-09-14, 1.0.2 2026-09-17; license_expression Apache-2.0)",
+      "url": "https://pypi.org/project/causilo/"
+    },
+    {
+      "title": "TabArena PR #536 'Add Causilo 1.0.0 foundation model' (submission details, hardware, discussion)",
+      "url": "https://github.com/autogluon/tabarena/pull/536"
+    },
+    {
+      "title": "TabArena BENCHMARK_LOG.md entry 2026-09-13 causilo_13092026 (maintainer re-run)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabflow_slurm/BENCHMARK_LOG.md"
+    },
+    {
+      "title": "TabArena models/causilo/info.py (commercial_use=False, license='Causilo License v1.0 (non-commercial weights)', pinned causilo==1.0.2)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/causilo/info.py"
+    },
+    {
+      "title": "TabArena live leaderboard (Causilo (default) flagged '$' = license does not permit commercial use)",
+      "url": "https://tabarena-leaderboard.hf.space"
+    },
+    {
+      "title": "Nums AI website (company, Seoul; Causilo overview; no training or pricing details)",
+      "url": "https://nums.world/"
+    },
+    {
+      "title": "Causilo demo Space (Gradio, ZeroGPU)",
+      "url": "https://huggingface.co/spaces/nums-ai/causilo-tabular-demo"
+    }
+  ],
+  "notes": "Verification status: architecture hyperparameters come from the report cross-checked against the released config.json and source code (parameter counts recomputed from module shapes: 36,075,834 / 37,083,799). Report dated 18 Sep 2026 (arXiv v1 19 Sep 2026); the model, code and weights were released 2026-09-13 (release_date). TabArena Elo/timing numbers for the comparison table come from data/tabarena.json ('Causilo (default)'); the report's own TabArena figures (1785.4 Elo, 0.1043 s/1K) and the README's self-reported 1792.9 are listed under benchmarks.other. Open uncertainties: (a) nothing is disclosed about the pretraining recipe — synthetic prior design, objective, optimizer, steps, batch size, hardware, compute or cost (all null); (b) the pretraining context length and any hard limits on rows/features are not stated (the library uses the full context and adapts to memory); (c) ScoringBench Elo values are only shown graphically; (d) TALENT is not reported; (e) no hosted API or pricing exists — commercial licensing is by individual arrangement. Licence caveat for users: the weights licence excludes not only revenue-generating use but also 'business decision-making, client deliverables, or production deployment' and any hosted/API service even if free, and treats models distilled from Causilo outputs as derivatives."
+}

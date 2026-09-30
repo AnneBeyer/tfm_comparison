@@ -1,0 +1,178 @@
+{
+  "id": "tabfm",
+  "name": "TabFM",
+  "tabarena_entry": "TabFM (default)",
+  "family": "TabFM",
+  "developer": "Google Research (Weihao Kong, Abhimanyu Das; with Erez Louidor Ilan, Taman Narayan, Shuxin Nie, Rajat Sen, Yichen Zhou, Joe Toth, Deqing Fu, Samet Oymak)",
+  "organization_type": "company",
+  "release_date": "2026-06-30",
+  "paper_title": "Introducing TabFM: A zero-shot foundation model for tabular data (Google Research blog post, 2026-06-30). No technical report or arXiv paper exists as of 2026-09-23; the GitHub README FAQ states a report is 'not included in this repository at this time'.",
+  "links": {
+    "paper": "https://research.google/blog/introducing-tabfm-a-zero-shot-foundation-model-for-tabular-data/",
+    "code": "https://github.com/google-research/tabfm",
+    "weights": "https://huggingface.co/google/tabfm-1.0.0-pytorch",
+    "docs": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-predict",
+    "pypi": "https://pypi.org/project/tabfm/",
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/434"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": true,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights are downloadable without gating from two Hugging Face repos created 2026-06-29: google/tabfm-1.0.0-pytorch (safetensors, fp32, 6.56 GB classification + 6.59 GB regression) and google/tabfm-1.0.0-jax (Orbax checkpoints). Inference code (JAX/Flax NNX and PyTorch backends, scikit-learn-style TabFMClassifier/TabFMRegressor, HF conversion script) is on GitHub and PyPI (tabfm 1.0.0 released 2026-06-29, 1.0.1 on 2026-07-09; Python >= 3.11; extras [jax], [jax,cuda], [pytorch]). The repository contains no training loop, no synthetic-data generator and no fine-tuning code (only Orbax checkpoint save/restore helpers). Hosted: Google Cloud BigQuery AI.PREDICT / AI.EVALUATE (Preview; BigQuery release note dated 2026-08-31, Cloud blog 2026-09-02). GitHub: 2,668 stars, 'not an officially supported Google product'. HF downloads (2026-09-23): ~31.5k (PyTorch), ~1.3k (JAX)."
+  },
+  "license": {
+    "code": "Apache-2.0",
+    "weights": "TabFM Non-Commercial License v1.0 (custom Google license; HF metadata license: other, license_name: tabfm-non-commercial-v1.0)",
+    "prior_or_data": "not released (the SCM synthetic-data generator and training pipeline are not public, so no license applies)",
+    "commercial_use": "no",
+    "non_commercial_use": "yes",
+    "notes": "Code repo LICENSE is the standard Apache License 2.0 (commercial use of the inference code is fine). The checkpoints (both HF repos ship the same LICENSE file) are 'freely available for your non-commercial and non-production use'. Key clauses: (1) 'Non-Commercial Purpose' = testing, evaluation or research 'not tied to commercial gain, production deployment, or revenue generation', incl. internal benchmarking, academic research and experimentation on private or public datasets 'provided the results are not used in commercial decision-making, client deliverables, or paid products/services'; explicitly NOT non-commercial: any revenue-generating activity, interactions with end users or production systems, or training/fine-tuning/distilling other models for commercial use. (2) Commercial or production use requires a separate commercial license from Google 'which Company may grant in its sole discretion' (possibly for a fee). (3) You may create Derivatives (fine-tuned/retrained versions) for non-commercial purposes but may NOT distribute the model or any Derivative at all (Section 3b). (4) Outputs are not Derivatives, but using the model, derivatives 'or any Outputs and data produced by the TabFM Model' for commercial/production purposes is prohibited (Section 3a). (5) Non-exclusive, non-transferable, non-sublicensable, revocable license; no trademark rights; users must comply with data-protection/AI regulation (GDPR, EU AI Act named). (6) 'For customers accessing the TabFM Model through our API, other terms and conditions may apply' -> commercial use is possible via BigQuery under Google Cloud terms (paid, token-priced from 2026-10-30). TabArena marks TabFM with '$' (commercial_use=False, license 'TabFM Non-Commercial License v1.0') for both TabFM and the TabFM+ system."
+  },
+  "architecture": {
+    "type": "Hybrid ICL transformer: two rounds of alternating column attention (Set Transformer / induced self-attention over rows, per column) and row attention (per row over its column tokens + 8 CLS tokens), row compression into a 2048-d vector (8 CLS tokens x 256), then a 24-block ICL transformer over the compressed row vectors (TabPFN-style 2D attention on cells + TabICL-style row-compressed ICL)",
+    "parameters_m": 1639.4,
+    "parameters_note": "Not published by Google; counted from the safetensors headers of google/tabfm-1.0.0-pytorch: classification checkpoint 1,639,444,522 params (913 tensors), regression checkpoint 1,647,783,213 params (918 tensors), both stored in float32 (6,557,888,408 and 6,591,243,724 bytes) and cast to bfloat16 by default at load. Breakdown (classification): ICL transformer 1,611.5 M (24 blocks, width 2048, SwiGLU FFN 8192: 3 x 2048 x 8192 + 4 x 2048^2 per block); ICL decoder MLP 8.4 M; 2 column embedders 6.58 M each; 2 row interactors 3.16 M each; cell embedder 0.036 M; CLS tokens 2,048; y-encoder 22.5 k (regression: y-encoder MLP 8.4 M, decoder 8.4 M). The HF card's 'embedding dim 256' refers only to the cell/column/row stages; the ICL stage runs at 8 x 256 = 2048.",
+    "layers": "cell embedder -> 3 ISAB column-attention blocks -> 3 row-attention blocks -> 3 ISAB column-attention blocks -> 3 row-attention blocks -> 24 ICL transformer blocks -> MLP head (each ISAB block contains two multi-head attention blocks: inducing points <- rows, rows <- inducing points)",
+    "embedding_dim": 256,
+    "attention_heads": 8,
+    "attention_scheme": "Column stage: for every column independently, a Set Transformer with 3 induced-self-attention blocks (4 heads, 256 inducing vectors, 'flash'/memory-efficient attention in JAX) attends across rows; the inducing points attend only to training rows (test rows are masked out of the column statistics), then every row (train and test) reads back from the inducing points. Row stage: for every row independently, 3 full-attention blocks (8 heads) over the row's column tokens plus 8 learned CLS tokens, with interleaved RoPE (base 100000) over the column axis; the second row stage keeps only the 8 CLS outputs and concatenates them into one 2048-d row vector ('row compression'). ICL stage: 24 blocks, 8 heads (head dim 256), no positional encoding; the training-row target is added to each context row's vector; attention mask lets every row (context or query) attend only to context rows (bidirectional over context; query rows never attend to each other or to themselves, their own information enters via the residual stream) - i.e. TabPFN-style masking, not autoregressive despite the HF card's word 'causal'. All attention uses RMSNorm pre/post-norm, per-head-dim q/k RMSNorm and a learned per-dimension scale, SwiGLU FFN (factor 4), no biases. Inference supports prefill of the context (col-embedder inducing reprs + per-layer ICL K/V) and cached decode of test rows in blocks of 128, optional int8 KV-cache quantization; activation chunking (4096 rows / 16 column instances / 8192 FFN tokens) bounds peak memory.",
+    "checkpoints": "separate classification & regression checkpoints (identical backbone config; classification head 10-way, regression head scalar; JAX config loss 'cross_entropy' vs 'rmse')",
+    "regression_head": "point prediction: MLP 2048 -> 4096 -> 1 on the standardized target (wrapper z-scores y and inverse-transforms); no distributional/quantile output",
+    "feature_embedding": "Every cell value is passed (NaN replaced by a -100 sentinel) through learned Fourier features: 32 frequencies, sin/cos -> 64-d -> linear 256-d; separate frequency banks and linear layers for numerical and for ordinal-encoded categorical cells (a per-column categorical mask selects the bank). 'Feature grouping' (size 3): the token for column h sums the Fourier embeddings of the cells at columns h, h+1 and h+3 (cyclic mod #features), giving each column token local cross-feature context. The (encoded) target is embedded (10-way lookup table for classification; 1->6->256 MLP for regression) and added to the cell tokens of context rows only. The wrapper does the tabular preprocessing: ordinal encoding of object/category/bool/string columns (appearance or frequency order, unknown/missing -> -1), datetime -> numeric, removal of constant/duplicate columns, z-score outlier clipping at |z| > 4, and per-ensemble-member normalization ('none' or 'power'; quantile/robust also available).",
+    "key_innovations": [
+      "Hybrid of TabPFN-style alternating column/row (2D) attention over cells with TabICL-style compression of each row into a single vector before a large ICL transformer, so the expensive row-to-row ICL attention runs over compressed row vectors rather than the full cell grid",
+      "Very large parameter budget (~1.64 B, most of it in a 2048-wide, 24-block ICL transformer) trained on 'hundreds of millions' of SCM-generated synthetic datasets",
+      "Fourier-feature cell embeddings with separate numerical/categorical frequency banks and cyclic feature grouping (offsets 0, 1, 3)",
+      "Set-Transformer (induced attention, 256 inducing points) column embedding whose statistics come from context rows only; 8 CLS tokens per row with RoPE over columns as the row-compression mechanism",
+      "Prefill/decode split with per-layer KV cache (optionally int8) so new test rows can be scored without re-encoding the context; always-on activation chunking for memory",
+      "Test-time ensembling of 32 randomized views (feature permutations, class-label shifts, normalizations) and an optional 'ensemble' preset (feature crosses, SVD features, NNLS blending, calibration) marketed as TabFM-Ensemble / TabFM+",
+      "Ships as JAX/Flax NNX (TPU/GPU/CPU, memory-efficient attention) and PyTorch backends with a scikit-learn API, and as a hosted SQL function (BigQuery AI.PREDICT)"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 10,
+    "max_classes_note": "Hard architectural limit (10-way head and 10-entry label embedding; TabFMClassifier.fit raises ValueError above 10 classes; HF card: 'hard model limit'). BigQuery AI.PREDICT: 'at most 10 different categories'. TabArena wraps TabFM in tabpfn-extensions' ManyClassClassifier (output coding over 10 symbols, one TabFM estimator per code row) above 10 classes (PR #608, 2026-09-22).",
+    "max_features": 500,
+    "max_features_note": "Recommended/operational limit, not architectural: the estimators' default max_num_features=500 subsamples at most 500 features per ensemble member (each of the 32 members draws its own subset), and the HF card says 'optimised for tables up to 500 features; behaviour on very wide tables may degrade'. The column set-transformer and cyclic feature grouping accept any number of columns. BigQuery AI.PREDICT allows up to 50 feature columns (contact bqml-feedback@google.com for more); an InfoWorld article (2026-09-02) quoted a 20-column limit, presumably since raised.",
+    "max_samples": null,
+    "max_samples_note": "No documented hard limit: by default all training rows are passed as context (max_num_rows=None), and memory 'scales with the number of training rows' (HF card). Blog/TabArena evaluation covers datasets from 700 to 150,000 samples. TabArena measured ~4.7 kB of GPU memory per training cell (rows x features) with out-of-memory failures at ~21 M cells on a 96 GB RTX PRO 6000 (PR #610), so TabArena now sets max_num_rows (per-member row subsampling, >= 5000 rows) above 0.7 x VRAM / 4700 B (14.3 M cells on 96 GB), and BeyondArena runs TabFM only on the slice with <= 100k training rows. The README FAQ says very large tables 'should be sampled or split before inference' (it also claims defaults of '100 context rows', which contradicts the code default max_num_rows=None). BigQuery applies 'intelligent training-data sampling' for large training tables.",
+    "missing_values": "native",
+    "categorical_features": "Supported natively via the wrapper: object/category/bool/string columns are ordinal-encoded (appearance or frequency order; unknown/missing -> -1) and flagged with a categorical mask that routes them through a dedicated Fourier frequency bank in the cell embedder; optional random permutation of category codes across ensemble members (permute_categorical, off by default); datetime columns are converted to numeric features. Missing numeric values reach the network as a -100 sentinel (torch.nan_to_num inside forward); missing categoricals get their own code. BigQuery accepts STRING/BOOL/INT64/FLOAT64/NUMERIC/BIGNUMERIC columns and 'automatically handles ... missing values, categorical encoding'.",
+    "text_features": false,
+    "other": "scikit-learn compatible TabFMClassifier / TabFMRegressor (predict, predict_proba, classes_); .ensemble() preset (feature crosses, SVD features, NNLS blending, Platt/vector calibration); context caching with per-layer KV cache and int8 quantization (PyTorch backend); JAX backend with configurable flash/jax attention per stage and TPU support; hosted SQL functions AI.PREDICT / AI.EVALUATE in BigQuery (task inferred from label type). No embeddings API, no quantile/distributional outputs, no multi-target, no text/image inputs, no fine-tuning API."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Only high-level information is public (no paper). Blog: 'TabFM is trained entirely on hundreds of millions of synthetic datasets. These datasets are dynamically generated using structural causal models (SCMs) that incorporate a wide variety of random functions', chosen because large, diverse real industrial tables are unavailable/proprietary and 'synthetic tables can be generated to be arbitrarily large'. HF card: 'The SCM prior encodes inductive biases about causal structure and feature relationships typical in tabular tasks'; synthetic data also avoids privacy/licensing concerns. Nothing is published about the graph/function families, noise models, how categorical or missing values are simulated, dataset sizes, class counts, or whether tree/GP components are used, and the generator code is not released.",
+    "synthetic_prior_types": ["SCM"],
+    "num_synthetic_datasets": null,
+    "num_synthetic_datasets_note": "'Hundreds of millions of synthetic datasets' (blog and HF card); no exact count is stated, so the numeric field is left null.",
+    "real_data": "none (trained 'entirely on synthetic data' per blog and HF card; no real-data pretraining or fine-tuning is mentioned)",
+    "objective": "Not documented. The released JAX v1.0.0 config lists loss 'cross_entropy' for the classification checkpoint and 'rmse' for the regression checkpoint, i.e. a supervised per-row loss on query rows given context rows (standard PFN/ICL training); no other details (masking scheme, curriculum, loss weighting) are public.",
+    "optimizer": null,
+    "training_steps": null,
+    "batch_size": null,
+    "hardware": null,
+    "compute": null,
+    "training_cost_note": "No training details (optimizer, schedule, steps, batch size, context lengths, hardware, compute or cost) have been published. Circumstantial: the model is implemented in JAX/Flax NNX with Orbax checkpoints (checkpointing.py saves an nnx.ModelAndOptimizer training state and dataset-iterator state), the authors' own benchmark runs were produced with the JAX backend on TPUs in bf16, and the authors describe 'our internal bf16 JAX/TPU results' - so TPU training is plausible but unconfirmed.",
+    "curriculum": null
+  },
+  "icl": {
+    "max_context_rows": null,
+    "context_note": "No fixed context window: the whole training set is passed as context by default (max_num_rows=None), attention over context rows is full (memory-efficient/flash attention in JAX, chunked SDPA in PyTorch), so the practical limit is accelerator memory (~4.7 kB per training cell on GPU; OOM at ~21 M cells on 96 GB per TabArena). Test rows are appended to the same sequence (padded to multiples of 128) or decoded against a cached context. The README FAQ describes a 'bounded context window' and recommends sampling/splitting very large tables; the exact bound used in training is not published.",
+    "large_dataset_strategy": "(1) Optional random row subsampling per ensemble member (max_num_rows; each of the 32 members draws its own rows), with a reserved holdout of 5% (bounded 1,000-10,000 rows) for fitting NNLS weights/calibration when subsampling is active; (2) per-member feature subsampling to max_num_features=500; (3) always-on activation chunking (v1.0.1) to bound peak memory; (4) prefill of the context once and batched decode of test rows via KV cache (cache_context, optional int8); (5) TabArena additionally caps rows above a GPU 'cell budget' (0.7 x VRAM / 4700 B); (6) BigQuery uses 'intelligent training-data sampling' plus distributed, parallelized inference over millions of prediction rows. No kNN retrieval or bagging over chunks is implemented.",
+    "test_time_ensembling": "Default n_estimators=32 (both TabFM and TabFM-Ensemble use 32 members): each member is a randomized view with a random feature permutation, a random class-label shift (classification), one of two normalization pipelines ('none' and 'power'), z-score outlier clipping (|z| > 4), and optionally permuted category codes; members are forwarded one at a time (batch_size=1) and logits are averaged with softmax temperature 0.9 (classification) / predictions averaged (regression). The .ensemble() preset (TabFM-Ensemble / TabFM+) adds on odd-numbered members sqrt(n_features) random pairwise feature crosses and sqrt(n_features) TruncatedSVD components, replaces uniform averaging by NNLS-weighted blending (weights = 0.75 x NNLS + 0.25 x uniform) fitted on 5-fold out-of-fold predictions (or a single split when >= 2000 validation rows), averages probabilities instead of logits, and applies Platt scaling (binary) or vector scaling (multiclass) with L2 regularization 1e-2. TabArena benchmarks the plain constructor as 'TabFM (default)' and the ensemble preset as the system 'TabFM+' because it performs internal cross-validation.",
+    "fine_tuning": "Not supported in the release: no training/fine-tuning code, and the HF card lists 'tasks requiring task-specific fine-tuning' under 'not intended for'. The weights license permits creating fine-tuned Derivatives for non-commercial purposes only and forbids distributing them.",
+    "inference_notes": "Zero-shot: fit() only fits the preprocessing/ensemble views (and, for the ensemble preset, OOF-based NNLS/calibration weights); no gradient updates. Compute dtype bfloat16 by default (fp32 weights cast at load; JAX dtype=jnp.bfloat16). One forward pass per ensemble member; predict cost scales with query size once the context is cached (v1.0.1). Determinism: results depend on random_state (default seed) and on bf16; TabArena observed small drift between single-row and batched predictions (0.5647 vs 0.5605 on a toy set). Runs on CPU, CUDA GPUs and TPUs (JAX)."
+  },
+  "speed": {
+    "hardware_note": "Authors' TabArena results were produced with the JAX backend on TPUs in bfloat16 (results files 'tabfm-jax-tpu-*.parquet'; 'our internal bf16 JAX/TPU results'). TabArena leaderboard numbers use the PyTorch backend in bf16 on NVIDIA GPUs (2026-09-16 rerun: 32-worker RTX PRO 6000 pool; original July 2026 run on TabArena's GPU cluster). Authors quote ~2 h per fold on an H100 for TabFM-Ensemble on the largest dataset (GiveMeSomeCredit, ~150k rows).",
+    "memory_note": "fp32 checkpoints 6.56 GB (classification) / 6.59 GB (regression), ~3.3 GB in bf16. Activation memory scales with context rows x features (~4.7 kB per training cell on GPU per TabArena); OOM at ~21 M training cells on 96 GB, hence TabArena's row cap above 14.3 M cells. Activation chunking (4096 rows / 16 column instances / 8192 FFN tokens) is on by default since v1.0.1; int8 KV-cache quantization keeps all 32 members' caches on device.",
+    "speed_claims": "Blog: predictions 'in a single forward pass'; attention over compressed row vectors 'drastically reduces the computation cost' vs the raw grid. Measured on TabArena (v0.1.9.2, 51 datasets, rerun 2026-09-16 excluding warm-up): median train 16.12 s per 1K rows, median predict 6.65 s per 1K rows (before the timing fix: 38.81 / 6.99), which is among the slowest foundation models on the board (e.g. TabPFN-3.5 1.84 / 0.47, TabICLv2 0.75 / 0.14 s per 1K). Before bf16 became the default (v1.0.1) TabArena needed 2-8 h limits for the three largest datasets; even after, 27 splits of APSFailure, GiveMeSomeCredit and customer_satisfaction_in_airline exceeded the 1 h budget and were rerun with 8 h. TabFM+ (ensemble preset): median train 20.04 s/1K, predict 7.63 s/1K, needed a 4 h per-task limit.",
+    "inference_cost_note": "BigQuery (Preview): during preview billed as slots (Enterprise/Enterprise Plus editions) or bytes processed (on-demand). From 2026-10-30 token-based pricing: input tokens = (train rows x columns + predict rows x (columns - 1)) x n_ensembles; output tokens = prediction rows x n_ensembles (columns = feature + label columns; n_ensembles = number of shuffled data versions averaged, value not documented; the open-source default is 32); price USD 0.05 per million input tokens and USD 0.20 per million output tokens, plus normal BigQuery slot/bytes charges for the rest of the query. Illustrative: 100k training rows x 20 columns, 10k prediction rows, n_ensembles=32 -> ~70 M input tokens (~$3.50) + 0.32 M output tokens (~$0.06). AI.EVALUATE is billed at the standard evaluation/prediction rate (on-demand $6.25 per TiB processed)."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": false,
+      "source": null,
+      "protocol_note": "Not evaluated on TALENT by the authors (no paper); no third-party TALENT results for TabFM were found as of 2026-09-23.",
+      "avg_rank": null,
+      "elo": null,
+      "win_rate_vs": null,
+      "other": null
+    },
+    "other": [
+      {
+        "name": "TabArena Elo as reported by the authors (blog figure, 2026-06-30; 38 classification + 13 regression datasets, 700-150,000 samples)",
+        "value": "TabFM: 1727 (classification), 1940 (regression); TabFM-Ensemble: 1815 (classification), 2125 (regression). Next best in the figure: AutoGluon 1.5 (extreme, 4h) 1666 / 1786, TabPFN-3 (default) 1639 / 1802, TabPFN-2.6 (default) 1585 / 1751, TabICLv2 (default) 1576 / 1687, RealTabPFN-2.5 (T+E) 1566 / 1752.",
+        "source": "https://storage.googleapis.com/gweb-research2023-media/original_images/TabFM3_Results.png"
+      },
+      {
+        "name": "TabFM+ system on the TabArena leaderboard (v0.1.9.2, open/systems view, 2026-09-23; ensemble preset benchmarked as a system with a 4 h per-task limit, run 2026-07-09)",
+        "value": "Elo 1822 (+108/-82) overall, 1803 classification, 2044 regression; normalized score 0.774; improvability 6.30%; median train 20.04 s/1K, predict 7.63 s/1K; verified; non-commercial license flag. In the same view TabFM (default) has Elo 1777 (1767 / 1965). (The models-only view used for data/tabarena.json lists TabFM (default) at 1772 overall, 1760 / 1965.)",
+        "source": "https://huggingface.co/spaces/TabArena/leaderboard/resolve/main/data/entrants_open/imputation_yes/splits_all/tasks_all/datasets_all/website_leaderboard.csv"
+      },
+      {
+        "name": "TabArena timing-pipeline rerun (PR #584, suite tabarena-2026-09-16)",
+        "value": "Elo hosted 1779 -> rerun 1777; normalized error 0.203 -> 0.204; median train 38.81 -> 16.12 s/1K; median infer 6.99 -> 6.65 s/1K (warm-up no longer timed).",
+        "source": "https://github.com/autogluon/tabarena/pull/584"
+      },
+      {
+        "name": "TabArena win rates of TabFM (default) vs selected models (models-only snapshot 2026-09-23)",
+        "value": "vs LimiX-2 0.325, TabPFN-3.5 0.485, Causilo 0.618, TabPFN-3.5-Fast 0.612, Mitra-v2 0.582, EXAONE-Tabular 0.676, TabPFN-3 0.781, Xiaomi-TabLDM 0.799, TabICLv2 0.848, RealTabPFN-2.5 (T+E) 0.832, RealMLP (T+E) 0.866, CatBoost (T+E) 0.905.",
+        "source": "https://huggingface.co/spaces/TabArena/leaderboard"
+      },
+      {
+        "name": "Authors' per-fold TabArena results shipped in the repo (JAX/TPU, 51 datasets x 30 folds)",
+        "value": "results/tabfm-jax-tpu-tabarena-{classification,regression}.parquet and tabfm-ensemble-jax-tpu-*.parquet (metrics: roc_auc for binary, log_loss for multiclass, rmse for regression). TabFM-Ensemble has lower mean error than TabFM on 39 of 51 datasets.",
+        "source": "https://github.com/google-research/tabfm/tree/main/results"
+      },
+      {
+        "name": "BeyondArena",
+        "value": "Run in progress (TabArena PR #610, open 2026-09-23): TabFM is run on the '!large' slice (<= 100k training rows, 475 items) with the GPU cell-budget row cap and output coding for >10 classes; no published numbers yet.",
+        "source": "https://github.com/autogluon/tabarena/pull/610"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "First release (v1.0.0, 2026-06-29/30); there is no earlier TabFM version. Relative to the models it builds on (per the blog): it keeps TabPFN-style alternating column/row attention over the cell grid for feature-interaction modelling but, like TabICL, compresses each row into a single vector (8 CLS tokens x 256 = 2048-d) before a much larger ICL transformer (24 blocks, ~1.6 B parameters in total), and it ships separate classification and regression checkpoints with a point (RMSE-trained) regression head rather than a distributional one. v1.0.1 (2026-07-09) changed defaults rather than weights: bf16 compute in PyTorch, activation chunking on by default, HF Hub loading, picklable estimators, prediction cost now independent of context size.",
+  "sources": [
+    {"title": "Google Research blog: Introducing TabFM: A zero-shot foundation model for tabular data (2026-06-30)", "url": "https://research.google/blog/introducing-tabfm-a-zero-shot-foundation-model-for-tabular-data/"},
+    {"title": "Blog figure: TabArena Elo for TabFM / TabFM-Ensemble (authors' numbers)", "url": "https://storage.googleapis.com/gweb-research2023-media/original_images/TabFM3_Results.png"},
+    {"title": "GitHub: google-research/tabfm README (install, license notice, FAQ on table size, no technical report)", "url": "https://github.com/google-research/tabfm"},
+    {"title": "GitHub: tabfm LICENSE (Apache-2.0)", "url": "https://github.com/google-research/tabfm/blob/main/LICENSE"},
+    {"title": "GitHub: tabfm CHANGELOG (1.0.0 2026-06-29, 1.0.1 2026-07-09)", "url": "https://github.com/google-research/tabfm/blob/main/CHANGELOG.md"},
+    {"title": "GitHub: tabfm/src/classifier_and_regressor.py (estimator defaults, ensemble preset, preprocessing, holdout logic)", "url": "https://github.com/google-research/tabfm/blob/main/tabfm/src/classifier_and_regressor.py"},
+    {"title": "GitHub: tabfm/src/pytorch/model.py (architecture, masking, prefill/decode, chunking)", "url": "https://github.com/google-research/tabfm/blob/main/tabfm/src/pytorch/model.py"},
+    {"title": "GitHub: tabfm/src/jax/tabfm_v1_0_0.py (v1.0.0 hard-coded config incl. loss, RoPE base, feature grouping, Fourier features)", "url": "https://github.com/google-research/tabfm/blob/main/tabfm/src/jax/tabfm_v1_0_0.py"},
+    {"title": "GitHub: tabfm/src/jax/model.py and checkpointing.py (JAX implementation; Orbax training-state helpers)", "url": "https://github.com/google-research/tabfm/blob/main/tabfm/src/jax/model.py"},
+    {"title": "GitHub: results/ (authors' per-fold TabArena results, JAX/TPU)", "url": "https://github.com/google-research/tabfm/tree/main/results"},
+    {"title": "Hugging Face model card: google/tabfm-1.0.0-pytorch", "url": "https://huggingface.co/google/tabfm-1.0.0-pytorch"},
+    {"title": "Hugging Face: TabFM Non-Commercial License v1.0 (LICENSE file)", "url": "https://huggingface.co/google/tabfm-1.0.0-pytorch/blob/main/LICENSE"},
+    {"title": "Hugging Face model card: google/tabfm-1.0.0-jax (Orbax weights; TPU/GPU via JAX)", "url": "https://huggingface.co/google/tabfm-1.0.0-jax"},
+    {"title": "Hugging Face: classification/config.json (architecture hyperparameters)", "url": "https://huggingface.co/google/tabfm-1.0.0-pytorch/blob/main/classification/config.json"},
+    {"title": "Hugging Face: classification/model.safetensors (parameter count read from the safetensors header; 6.56 GB fp32)", "url": "https://huggingface.co/google/tabfm-1.0.0-pytorch/blob/main/classification/model.safetensors"},
+    {"title": "Hugging Face API metadata (repo created 2026-06-29, downloads, license tags)", "url": "https://huggingface.co/api/models/google/tabfm-1.0.0-pytorch"},
+    {"title": "PyPI: tabfm (1.0.0, 1.0.1)", "url": "https://pypi.org/project/tabfm/"},
+    {"title": "TabArena PR #434: Add TabFM (author discussion on timing, bf16, n_estimators, TabFM vs TabFM+ naming)", "url": "https://github.com/autogluon/tabarena/pull/434"},
+    {"title": "TabArena PR #437: add TabFM+", "url": "https://github.com/autogluon/tabarena/pull/437"},
+    {"title": "TabArena PR #584: rerun on the timing pipeline (Elo/time table)", "url": "https://github.com/autogluon/tabarena/pull/584"},
+    {"title": "TabArena PR #608: TabFM output-code datasets with more than ten classes", "url": "https://github.com/autogluon/tabarena/pull/608"},
+    {"title": "TabArena PR #610: BeyondArena run, GPU cell-budget sub-sampling (OOM at ~21 M cells / 96 GB)", "url": "https://github.com/autogluon/tabarena/pull/610"},
+    {"title": "TabArena source: models/tabfm/info.py (license, commercial_use=False, dates, pinned commit)", "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabfm/info.py"},
+    {"title": "TabArena source: models/tabfm/model.py (wrapper: PyTorch backend, GPU, many-class output coding)", "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabfm/model.py"},
+    {"title": "TabArena source: systems/tabfm_plus/info.py and system.py (TabFM+ = ensemble preset benchmarked as a system)", "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/systems/tabfm_plus/info.py"},
+    {"title": "TabArena leaderboard Space (CSV exports incl. systems view; version history)", "url": "https://huggingface.co/spaces/TabArena/leaderboard"},
+    {"title": "BigQuery docs: The AI.PREDICT function (limits: 50 feature columns, 10 classes; preview pricing)", "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-predict"},
+    {"title": "BigQuery docs: The AI.EVALUATE function", "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-evaluate"},
+    {"title": "BigQuery pricing: 'TabFM on BigQuery' token pricing from 2026-10-30 ($0.05 / M input tokens, $0.20 / M output tokens)", "url": "https://cloud.google.com/bigquery/pricing"},
+    {"title": "BigQuery release notes: TabFM preview entry dated 2026-08-31", "url": "https://docs.cloud.google.com/bigquery/docs/release-notes"},
+    {"title": "Google Cloud blog: Introducing TabFM in BigQuery (2026-09-02)", "url": "https://cloud.google.com/blog/products/data-analytics/tabfm-adds-predictive-ml-to-bigquery"},
+    {"title": "InfoWorld (secondary, 2026-09-02): Google brings predictive AI to BigQuery (mentions a 20-feature-column limit at the time)", "url": "https://www.infoworld.com/article/4217530/google-brings-predictive-ai-to-bigquery-without-the-ml-training.html"}
+  ],
+  "notes": "No paper or technical report exists (GitHub README FAQ; arXiv and web searches on 2026-09-23 found none), so training recipe, prior details and hardware are unknown - all such fields are null. The parameter count (~1.64 B) is derived from the checkpoint files, not from a Google statement; the HF card only lists layer counts and 'embedding dim 256' (the ICL transformer actually runs at width 2048 with 8192-wide SwiGLU FFNs). Naming: the blog's 'TabFM-Ensemble' = the .ensemble() preset (feature crosses, SVD features, NNLS blending, calibration, still 32 members); TabArena lists it as the system 'TabFM+' (Elo 1822 in the open view), while 'TabFM (default)' is the plain 32-member estimator (Elo 1772 in the models-only view joined from data/tabarena.json; 1777 in the open view; TabArena's own re-run vs hosted Elo 1777 vs 1779; authors' blog figure 1727 cls / 1940 reg). TabArena runs the PyTorch backend in bf16 on GPU with a per-split random_state, 8-fold OOF validation ('8x1'), refit_folds, and 8 h limits for the three largest datasets. Timeline: HF repos and v1.0.0 2026-06-29; blog 2026-06-30 (also TabArena date_introduced); on TabArena leaderboard 2026-07-08 (v0.1.5.2), TabFM+ 2026-08-06 (v0.1.8); v1.0.1 2026-07-09; BigQuery preview release note 2026-08-31, Cloud blog 2026-09-02; token pricing from 2026-10-30. Licensing summary: code Apache-2.0; weights non-commercial/non-production only, no redistribution, commercial use only via a separate Google license or the BigQuery API. Inconsistencies noticed: README FAQ says default '100 context rows' but the code default is max_num_rows=None (all rows); HF card calls the ICL transformer 'causal' although the mask is context-only (TabPFN-style); InfoWorld's 20-column BigQuery limit vs the docs' 50."
+}

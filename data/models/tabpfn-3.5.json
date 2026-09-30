@@ -1,0 +1,303 @@
+{
+  "id": "tabpfn-3.5",
+  "name": "TabPFN-3.5",
+  "tabarena_entry": "TabPFN-3.5 (default)",
+  "family": "TabPFN",
+  "developer": "Prior Labs GmbH (Prior Labs Team; report lists ~60 contributors, arXiv first authors Benjamin Jäger, Nick Erickson, Léo Grinsztajn, Felix Birkel, Klemens Flöge; scientific advisors incl. Frank Hutter, Noah Hollmann)",
+  "organization_type": "company",
+  "release_date": "2026-09-15",
+  "paper_title": "TabPFN-3.5: Technical Report",
+  "links": {
+    "paper": "https://arxiv.org/abs/2609.17895",
+    "code": "https://github.com/PriorLabs/TabPFN",
+    "weights": "https://huggingface.co/Prior-Labs/tabpfn_3_5",
+    "docs": "https://docs.priorlabs.ai/changelog/tabpfn-3.5",
+    "pypi": "https://pypi.org/project/tabpfn/",
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/577"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": true,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights (tabpfn-v3.5-20260909.safetensors, 876 MB fp32; plus an experimental '_multiclass' variant checkpoint) are hosted on Hugging Face behind a license-acceptance gate: the tabpfn package (>= 9.0.0, TabPFN-3.5 is the default model) downloads them after a one-time Prior Labs login/TABPFN_TOKEN and license acceptance. Only inference code is open source; the synthetic prior, training code and the Plus/Thinking implementations are proprietary ('intentionally not described'). Hosted access: Prior Labs API / tabpfn-client (model_path 'v3.5_default' selects TabPFN-3.5-Plus; base and Fast selectable), MCP server, SAP AI Core, AWS SageMaker Marketplace, Azure AI Foundry (announced), on-prem container, Databricks reference integration. Free API tier: 5,000,000 tokens/day and 20,000,000 tokens/month by default."
+  },
+  "license": {
+    "code": "Apache-2.0",
+    "weights": "TABPFN-3.5 License v1.0 (Prior Labs non-commercial license, last revised 2026-09-09)",
+    "prior_or_data": "not applicable: the synthetic-data generator/prior and training code are not released",
+    "commercial_use": "no",
+    "non_commercial_use": "yes",
+    "notes": "Code: the tabpfn package and tabpfn-client were relicensed to plain Apache 2.0 in tabpfn 9.0.0 (previously 'Prior Labs License' = Apache 2.0 + attribution). Weights: the TABPFN-3.5 License v1.0 grants a revocable, royalty-free license 'solely for your Non-Commercial Purposes' (testing, evaluation, research, internal benchmarking, academic work, public data-science competitions such as Kaggle). Explicitly NOT allowed without a separate commercial license: any revenue-generating activity, production deployment or end-user-facing systems, using outputs in commercial decision-making, client deliverables or procurement/competitive benchmarking, hosting the model as an API/SaaS, training/fine-tuning/distilling other models for commercial use; excluded uses also include military, surveillance and biometric processing. Derivatives (incl. fine-tuned checkpoints) and outputs inherit the non-commercial restriction; redistribution requires the attribution notice; the license is not available to consumers (German BGB §13) and is governed by German law. Prior Labs states the license is 'designed to be permissive for academic use, research, and evaluation in commercial settings', i.e. a company may download and run preliminary assessments on its own data, which is why TabArena labels it 'license does not permit commercial use'. Commercial/production use requires the Commercial Enterprise License (managed API under Prior Labs' general terms, SageMaker/Foundry/SAP AI Core VPC, on-prem); contact sales@priorlabs.ai. Sources [1][6][27][28]."
+  },
+  "architecture": {
+    "type": "three-stage in-context-learning transformer (TabICLv2/TabPFN-3 lineage): per-column induced-attention distribution embedder -> per-row feature aggregation into CLS tokens -> row-wise ICL transformer; single multitask (classification + regression) checkpoint with attention-based many-class decoder and binned regression head",
+    "parameters_m": 219.0,
+    "parameters_note": "Exact count read from the safetensors header of tabpfn-v3.5-20260909.safetensors: 218,987,657 parameters (fp32, 876 MB); the report rounds to 220 M. Breakdown: 24 ICL blocks 203.2 M (8.47 M per block), task heads 14.3 M (incl. 5000x1024 regression output projection and many-class decoder), distribution embedder 0.87 M, feature aggregator 0.40 M, label encoders 0.19 M. One checkpoint serves both tasks (vs. TabPFN-3: 53 M classifier + 58 M regressor). Parameter count roughly quadrupled vs TabPFN-3 because the ICL width doubled (linear layers dominate).",
+    "layers": "3 induced-self-attention blocks (distribution embedder, per column) + 3 feature-aggregation transformer blocks (per row, RoPE) + 24 ICL transformer blocks; feed-forward expansion factor 2",
+    "embedding_dim": 1024,
+    "attention_heads": 16,
+    "attention_scheme": "ICL width 1024 = 8 CLS tokens x 128-dim cell embedding (TabPFN-3: 4 x 128 = 512). Stage 1 (distribution embedder): induced self-attention over the rows of each column with 128 inducing points, 3 blocks, 8 heads, QK-norm and query-aware softmax scaling. Stage 2 (feature aggregation): per-row attention among feature-group embeddings and 8 learned CLS tokens, 3 blocks, 8 heads, RoPE (base 1e5); concatenated CLS states give a fixed 1024-d row embedding independent of the number of features. Stage 3 (ICL): 24 blocks, 16 query heads of dim 64; train rows use full multi-head attention while test rows attend to train rows through a single 64-dim key/value head (multi-query attention), so the KV cache stays ~unchanged vs TabPFN-3 despite 4x parameters. Normalization added in 3.5: QK-norm (RMSNorm on Q and K) in attention, LayerNorm after input encoding, RMSNorm before the task head. Classification readout: attention of test embeddings over one-hot training labels (many-class decoder, 6 heads x 64, softmax scaling, non-parametric in the number of classes, trained for up to 160 classes). Pre-ICL stages are row-chunked (2048 rows) and column-chunked to decouple memory from table size.",
+    "checkpoints": "single multitask checkpoint (task type supplied as input; only label encoders and output heads are task-specific). Also released: experimental 'tabpfn-v3.5-20260909_multiclass' variant (slightly different architecture, sometimes better on multiclass) and the separate, smaller TabPFN-3.5-Fast checkpoint.",
+    "regression_head": "distributional: RMSNorm + 2-layer MLP (1024->2048->1024) then linear projection to a bar distribution over 5000 fixed buckets (5001 learned borders); predict returns mean/median/mode, quantiles or the full distribution (criterion + logits); optional held-out calibration (NLL/CRPS)",
+    "feature_embedding": "Per-cell encoding in three stages: (1) per-cell preprocessing records a missing/infinite indicator, mean-imputes with the training-column mean and derives a standard-scaled value plus an in-context ECDF rank u in [0,1] (midrank against the training rows of the same column; bucketed to 8192 edges so the cache does not grow with rows); (2) feature grouping collects G=3 columns at circular offsets 2^j mod C for all signals (3G channels per cell); (3) group embedding = learnable Fourier features of the scaled values (F=32 learned frequencies, sin/cos, summed over the group) + a linear metadata encoder over scaled values, missing indicators and the ECDF rank expanded into K=4 low-frequency sine/cosine harmonics, summed and layer-normalised into a 128-d group embedding. Targets: learned embedding per class (160 slots) / linear projection for regression. No quantile transforms, robust scaling or SVD augmentation any more.",
+    "key_innovations": [
+      "Learned Fourier-feature cell encoding (inspired by TabFM) instead of a purely linear projection, which captures small value differences and high-cardinality ordinal-encoded categoricals",
+      "In-context ECDF (empirical CDF rank) features that place each value in its column's training distribution, invariant to monotone transforms and robust to heavy tails; bucketed so the KV cache size is independent of the row count",
+      "Single multitask checkpoint trained jointly for classification and regression with task type as input; shared encoder/aggregator/ICL transformer, task-specific label encoders and heads",
+      "Doubled ICL width (512 -> 1024 via 8 instead of 4 CLS tokens, 8 -> 16 heads) while keeping a single 64-d KV head for test rows, so cached single-row prediction latency matches TabPFN-3",
+      "Added QK-norm, post-encoding LayerNorm and pre-head RMSNorm for stable training at larger width across two tasks",
+      "Simplified preprocessing: one plain feature recipe (no quantile/robust scaling/SVD), 8 estimators over dataset permutations; built-in text (tf-idf char n-grams + SVD) and datetime expansion in the OSS package",
+      "Synthetic prior tuned to high-cardinality categoricals, wide tables (up to 6k/20k features) and grouped train/test splits; draws on the TabICLv2 prior",
+      "Smaller KV cache for classification (caches projected many-class-decoder keys instead of final-layer train embeddings) and bucketed ECDF context"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 160,
+    "max_classes_note": "MAX_NUMBER_OF_CLASSES = 160 in the checkpoint (label embeddings have 160 slots; the attention-based many-class decoder is non-parametric in the class count but the checkpoint fixes the ceiling). More classes via the ECOC ManyClassClassifier in tabpfn-extensions (160-symbol alphabet).",
+    "max_features": 6000,
+    "max_features_note": "Recommended up to 6,000 columns (report Fig. 1a and docs); checkpoint ceiling MAX_NUMBER_OF_FEATURES = 20,000 (10x TabPFN-3's 2,000). Each estimator sees at most 768 features; wider tables are split across estimators ('balanced' round-robin, Gini-importance top-k above 100k rows), so the default 8 estimators cover ~6,000 columns and 16 cover ~12,000. Rows and columns trade off (1M rows x 6k features is stated as simultaneously feasible).",
+    "max_samples": 1000000,
+    "max_samples_note": "MAX_NUMBER_OF_SAMPLES = 1,000,000 training rows in the checkpoint ('recommended limits for strong performance, not computational limits'; ignore_pretraining_limits=True lifts the check). CPU inference is limited to 5,000 rows by default (MAX_CPU_SAMPLES). Attention cost grows quadratically in training rows above ~128k rows; per-estimator row subsampling (SUBSAMPLE_SAMPLES) is the recommended workaround for memory.",
+    "missing_values": "native",
+    "categorical_features": "native: categoricals are ordinal-encoded (order shuffled per estimator) at any cardinality (MAX_UNIQUE_FOR_CATEGORICAL_FEATURES = 1,000,000); declared categoricals (categorical_features_indices or pandas 'category' dtype) are respected regardless of cardinality; undeclared columns are auto-typed (numeric columns with <=30 unique values, or string columns with <=30 distinct values, count as categorical). High-cardinality IDs (SKUs, merchant IDs, zip codes) are a stated strength.",
+    "text_features": true,
+    "other": "OSS package: string columns (pandas string / pyarrow dtype, >30 distinct values) are expanded by skrub.StringEncoder (tf-idf over character n-grams + truncated SVD, 30 components per column; TRANSFORM_TEXT=True by default) and datetime columns into calendar features (TRANSFORM_DATES=True); the hosted Plus/Thinking variants replace this with proprietary native text processing (limits: 50M tokens total, 2,500 characters per value). Also: full predictive distributions/quantiles for regression with optional CRPS/NLL calibration; KV cache (fit_with_cache) for sub-second repeated prediction; row/test-set chunking; embeddings extraction; gradient-based fine-tuning; decoder-attention readout showing which training rows drive a prediction (extensions); ECOC many-class extension; time-series forecasting through the TabPFN-TS wrapper (no TS fine-tuning needed); relational/multi-table prediction via the TabPFN-Rel harness; unsupervised extensions (anomaly detection, synthetic data generation, imputation); images via TabPFNWithImages (frozen embeddings). Not suitable for raw unstructured data such as images without such embeddings."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Pipeline 'closely follows TabPFN-3': datasets are sampled from a structural-causal-model (SCM) prior - sample dataset hyper-parameters (rows, features, classes), sample a DAG with graph-sampling algorithms, draw i.i.d. noise per node, propagate values in topological order through 'combiner mechanisms' and activations (incl. sinusoidal/high-frequency and spatial activations), select feature and target nodes, post-process (missingness, categorical variables, many-class targets, temporal dynamic-SCM structure, out-of-distribution/extrapolation tasks). TabPFN-3.5 adds general diversity and scalability improvements, borrows ideas from the TabICLv2 prior, and puts specific emphasis on realistic high-cardinality categorical variables, large feature counts, and grouped data where the test set comes from a different group than the training set. The prior itself is proprietary (not released; a small open 'nanoTabPFN' cookbook exists for pretraining toy models).",
+    "synthetic_prior_types": [
+      "SCM (DAG-based structural causal models with combiner mechanisms)",
+      "dynamic/temporal SCM",
+      "spatial activations",
+      "many-class prior",
+      "out-of-distribution / extrapolation prior",
+      "high-cardinality categorical prior",
+      "wide-table (many features) prior",
+      "grouped-split prior",
+      "TabICLv2-inspired components"
+    ],
+    "num_synthetic_datasets": null,
+    "num_synthetic_datasets_note": "Not stated in the TabPFN-3.5 report. (The predecessor TabPFN-3 report only states that TabPFN-3 was trained on 'more than 8 trillion tokens' of synthetic data; no dataset count for 3.5.)",
+    "real_data": "none: 'TabPFN-3.5 is trained purely on synthetic tabular tasks' (model card); no real-data continued pretraining or fine-tuning is reported, and the Thinking mode also uses no real data, LLMs or other models",
+    "objective": "not stated explicitly; joint multitask pretraining on synthetic classification and regression tasks with the task type as an input (classification read out by attention over one-hot training labels, regression as a predicted distribution over 5000 fixed bins, i.e. the usual TabPFN in-context prediction losses)",
+    "optimizer": "not stated",
+    "training_steps": "not stated",
+    "batch_size": "not stated",
+    "hardware": "not stated (the report acknowledges EuroHPC access to the LUMI supercomputer at CSC Finland via a Regular Access call; GPU type/count not given)",
+    "compute": "not stated",
+    "training_cost_note": "No training cost, GPU-hours, duration, optimizer, learning rate, batch size or step count is disclosed in the report, model card or docs; the only hint is the EuroHPC/LUMI acknowledgement. Training code is proprietary.",
+    "curriculum": "not stated"
+  },
+  "icl": {
+    "max_context_rows": 1000000,
+    "context_note": "The whole training set (up to 1,000,000 rows by default, SUBSAMPLE_SAMPLES=None) is the in-context 'training' set of a single forward pass per estimator; there is no positional order over rows. Pre-ICL stages are streamed in 2048-row chunks; attention over training rows scales quadratically above ~128k rows. Cached inference stores per-block inducing states, ICL keys/values of training rows (single KV head for test attention), projected many-class-decoder keys and a bucketed ECDF context: about 4 GB per estimator (32 GB for 8) at 1M rows on GPU. VRAM without cache on an A100 (200 features, 1000 test rows, 8 estimators): ~3 GB up to 10k rows, ~4 GB at 100k, ~7 GB at 200k, ~15 GB at 500k training rows.",
+    "large_dataset_strategy": "Full-context ICL up to 1M rows with row-chunked pre-ICL stages and multi-query (1 KV head) test attention; optional per-estimator row subsampling via inference_config SUBSAMPLE_SAMPLES (methods: stratified for classification, balanced for regression, or 'majority_downsample' which keeps all minority rows / non-majority target values) combined with more estimators so that n_estimators x SUBSAMPLE_SAMPLES covers the data; features beyond 768 per estimator are distributed across estimators (balanced round-robin, Gini-importance top-k above 100k rows); large test sets are chunked (32,768 rows per pass in cached mode, user batching otherwise); memory_saving_mode; estimators can be parallelised over several GPUs; the hosted Thinking variant is capped at 200k rows x 2,000 columns.",
+    "test_time_ensembling": "8 estimators by default (declared in the checkpoint; n_estimators='auto' uses it and is not auto-raised), each a forward pass on a different permutation of the dataset: shuffled feature order, shuffled class order, shuffled ordinal category codes, and for regression alternating target transforms (none / 'safepower'); one plain feature recipe (no quantile, robust-scaling or SVD variants any more); predictions averaged; softmax temperature 1.0 (checkpoint default; TabPFN-3 used 0.9)",
+    "fine_tuning": "Supported in the OSS package: FinetunedTabPFNClassifier / FinetunedTabPFNRegressor perform gradient-based full-parameter fine-tuning on the user's dataset (e.g. epochs=30, learning_rate=1e-5; multi-GPU via DDP/torchrun; large batches chunked for FlashAttention), mirroring the inference preprocessing; on the multitask checkpoint the other task's encoder/head is left without gradients. Text/datetime expansion is not run by the fine-tuning estimators; fine-tuned TabPFN-3 checkpoints must be re-done from TabPFN-3.5. Fine-tuned derivatives remain under the non-commercial weights license.",
+    "inference_notes": "fit() mostly preprocesses; the transformer pass happens in predict() unless fit_mode='fit_with_cache' (KV cache), after which test rows are scored in well under a second (product page: 'x840 faster predictions with kv-cache'; cached single-row latency equals TabPFN-3's). Requires PyTorch >= 2.5 (2.8+ recommended), Python 3.10-3.14; CUDA, ROCm, Apple MPS (MLX FlashAttention) and CPU (<= 5,000 rows) supported; FlashAttention-3/torch.compile opt-in. Hosted TabPFN-3.5-Plus adds FP8 attention (1.25x TabPFN-3 latency instead of 2x) and proprietary text handling; TabPFN-3.5-Thinking adds inference-time compute at fit time (effort medium/high, metric-targeted, optional group/time columns) and is 12x faster than TabPFN-3-Thinking; a proprietary distillation engine (TabPFN-as-MLP/tree ensemble) is enterprise-only."
+  },
+  "speed": {
+    "hardware_note": "Report inference benchmarks: one NVIDIA RTX PRO 6000 Blackwell (96 GB), 100 columns, 1,024 test rows, single estimator forward time x default estimator count. TabArena timings: TabArena protocol on one node with 24 CPU cores and one RTX Pro 6000 GPU, 8-fold bagging, re-timed wrappers without checkpoint-reload overhead. Docs VRAM table measured on an A100. Docs minimum: NVIDIA T4; A100/H100 recommended.",
+    "memory_note": "Peak VRAM (A100, default 8 estimators, 200 features, 1,000 test rows): ~3 GB (1k-10k rows), ~3.5 GB (50k), ~4 GB (100k), ~7 GB (200k), ~15 GB (500k rows). KV cache ~4 GB per estimator at 1M rows (32 GB for 8 estimators), ~half at 500k. Host RAM for a 1M x 2000 float32 fit+predict cut from 26.1 GB to 15.4 GB in tabpfn 9.0 (41% lower peak RAM in the large-table benchmark). GPU with ~8 GB VRAM works for most datasets, 16 GB for large ones.",
+    "speed_claims": "Up to 2x slower than TabPFN-3 on large training sets because of the doubled width (Plus with FP8 attention: 1.25x TabPFN-3 latency); identical cached single-row prediction time as TabPFN-3; on TabArena median 1.83 s fit + 0.44 s predict per 1,000 rows vs TabFM 17.11 s + 7.00 s: 'beats TabFM by 84 Elo points using one-tenth of its total time per sample' and 'outperforms AutoGluon 1.6 extreme by 130 Elo points in a fifth of the time'; product page: 0.5 s per 1k rows without cache (Fast 0.17 s) vs 7.0 s for other TFMs; docs cookbook (API, incl. network): ~261 rows/s vs TabPFN-3 ~572 rows/s on a small dataset. TabPFN-3.5-Thinking is 12x faster than TabPFN-3-Thinking (2.00 s fit / 1.47 s predict per 1k rows on TabArena vs 36.84 s / 2.43 s).",
+    "inference_cost_note": "Local inference is free but non-commercial. Hosted API is metered in 'tokens' (compute units): each billable TabPFN-3/3.5 operation costs at least 10,000 tokens; predictions and Thinking fits share budgets (default free tier 5,000,000 tokens/day, 20,000,000 tokens/month; uploads and standard fits free; 75% lower charge on successful KV-cache reuse; rate limits 60 predict and 60 fit requests/min, 10 Thinking fits/min); estimate_cost() gives the token price of a request in advance. Public pricing page lists Free / Pro / Max (API), Free non-commercial vs Commercial (private cloud / on-prem) tiers without published per-token or monthly prices ('Contact sales'); from 15-29 Sept 2026 a 50% reduction on TabPFN-3.5 token rates. AWS SageMaker Marketplace listing: software free of charge (pay only AWS compute, GPU instances such as ml.g5.xlarge); Commercial Enterprise License priced individually."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": true,
+      "source": "TabPFN-3.5 Technical Report, Appendix C.5 / Figures 19-20 and Table 1 (https://arxiv.org/html/2609.17895v1)",
+      "protocol_note": "Two views. (a) TabICLv2 evaluation protocol: the 300 TALENT base datasets minus 26 used during TabPFN-2/TabICLv2 development = 274 datasets, fixed 64/16/20 splits, baselines run by the TabICLv2 authors, average rank with 95% bootstrap CI (same setup as the TabPFN-3 report). (b) All TALENT datasets with published baselines and <= 1M training rows: the 300 base datasets plus the large-data and high-dimensional extensions = 337 datasets, against the 35 classical/deep baselines published by the TALENT authors plus TabPFN-3 (no other TFM available on the extensions). Missing cells are filled with the KNN baseline. Only the base TabPFN-3.5 was evaluated on TALENT (no Fast/Thinking).",
+      "avg_rank": 2.95,
+      "elo": null,
+      "win_rate_vs": "80% of datasets vs TabICLv2 (best other TFM) and 91% vs CatBoost (best non-TFM) on the 337-dataset view (Table 1; the TabICLv2 entry is taken from the 274-dataset view)",
+      "other": "TabICLv2 protocol (274 datasets): TabPFN-3.5 rank 1 with average rank 2.95 vs TabPFN-3 4.48 and TabICLv2 5.35 (CIs of 3.5 and 3 do not overlap). All-datasets view (337): average rank 2.13 vs TabPFN-3 3.20, rank 1 of 37 methods."
+    },
+    "other": [
+      {
+        "name": "TabArena (report, 51 datasets / 816 tasks)",
+        "value": "Elo 1866 (-65/+87), rank 1 of 89 leaderboard entries (TabPFN-3.5-Thinking 1910 excluded), 3.3 dataset wins, improvability 7.0%, median 1.83 s fit / 0.44 s predict per 1k rows; vs TabFM+ 1823, AutoGluon 1.6 noncommercial 1786, TabFM 1780, TabPFN-3-Thinking 1748, EXAONE-Tabular 1747, TabPFN-3 1631, TabICLv2 1565. Subsets: classification 1845 (38 datasets), regression 2103 (13), TabArena-small 1796 (36 datasets, 500-10k rows), TabArena-medium 2293 (15 datasets, 10k-100k rows). Win rates (Table 1): 57% vs TabFM+, 96% vs RealMLP. Official TabArena run after PR #577 (17 Sep 2026): Elo 1864, rank 1.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Table 2-6); https://github.com/autogluon/tabarena/pull/577"
+      },
+      {
+        "name": "BeyondArena core (142 datasets / 507 splits; grouped, temporal, tiny-1M rows, high-dim, high-cardinality, text)",
+        "value": "Rank 1 of 29 overall and first in every non-large (<100k rows) slice; ~150 Elo ahead of the previous overall leader (Prior Labs blog); win rate 83% vs TabICLv2, 79% vs RealMLP (tuned+ensembled); improves on TabPFN-3 in every slice; grouped data without large tables: 1288 Elo with the group id passed as a categorical (1240 without, rank 6 -> 1); with large tables 1267 (1187 without). Thinking +20 Elo; Fast -40 Elo at 3x speed. Leads TabFM and EXAONE-Tabular on the 116 datasets all three can run (except the small-data slice). Exact per-slice Elo only in figures (rounded to 10).",
+        "source": "https://arxiv.org/html/2609.17895v1 (Sec. 2.2, C.2)"
+      },
+      {
+        "name": "STRABLE (108 datasets with strings, 3 folds, 200 methods)",
+        "value": "TabPFN-3.5 family rank 1 of 197 entries; base model uses TF-IDF string encoding; TabPFN-3.5-Thinking and -Plus (raw text) hold positions 1 and 2 by a substantial margin; win rate of best member 98% vs TabICLv2 and 98% vs XGBoost. Exact Elo only in Figure 5a/17.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Sec. 2.3, C.3)"
+      },
+      {
+        "name": "MulTaBench (40 multimodal datasets: 20 image, 20 text; 5 folds)",
+        "value": "Family rank 1 of 14; base model with frozen e5-small-v2 / DINOv3-small embeddings (30 PCA comps) beats all published baselines; win rate 90% vs TabICLv2, 95% vs TabM, 77% vs AutoGluon-MM (Thinking). Exact Elo only in Figure 5b/18.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Sec. 2.4, C.4)"
+      },
+      {
+        "name": "RelArena-alpha (21 RelBench entity-level tasks)",
+        "value": "TabPFN-Rel harness on TabPFN-3.5-Plus ranks 1 of 12 on both the models and model+systems leaderboards; switching the base model from TabPFN-3-Plus to TabPFN-3.5-Plus adds nearly 90 Elo, the internal harness preview a further 36 Elo; win rate 57% vs RT-PluRel, 71% vs KurveRSC. Open-checkpoint results are work in progress.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Sec. 2.5)"
+      },
+      {
+        "name": "ScoringBench (101 OpenML regression datasets subsampled to 3,000 rows, 5-fold CV, CRPS)",
+        "value": "TabPFN-3.5 rank 1 of 52 with mean CRPS rank 2.85 (TabPFN-3.5-Fast 2nd at 5.76, TabPFN-3 7.64); beats TabPFN-3 on 85 of 101 datasets (median +1.3% CRPS, sign test p=8e-13); win rate 78% vs EXAONE-Tabular, 91% vs RealMLP; default config, no tuning.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Appendix C.7)"
+      },
+      {
+        "name": "fev-bench (100 time-series forecasting tasks, SQL/MASE skill vs Seasonal Naive)",
+        "value": "Plain TabPFN-3.5 checkpoint inside the TabPFN-TS wrapper (context 32,768, 12 AutoSeasonal periods, no TS fine-tuning) places 6th of 29 methods, 1.1 points above the TS-specific TabPFN-TS-3 at 2.4x its speed, behind TimesFM-3, Chronos-2 (2 variants), TiRex-2 and Toto-2.0.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Appendix C.6)"
+      },
+      {
+        "name": "Benchmark overview (Table 1)",
+        "value": "Best TabPFN-3.5 family member ranks 1st on all 7 benchmarks (TabArena, BeyondArena, STRABLE, MulTaBench, RelArena-alpha, TALENT, ScoringBench); mean win rate 78% vs the best other TFM and 89% vs the best non-foundation model.",
+        "source": "https://arxiv.org/html/2609.17895v1 (Table 1, Appendix C.8)"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "vs TabPFN-3 (May 2026): (1) one multitask checkpoint (220 M params) instead of separate 53 M classifier / 58 M regressor checkpoints; (2) ICL width doubled 512 -> 1024 (8 instead of 4 CLS tokens, 16 instead of 8 heads, per-head dim 64 unchanged, still 24 ICL blocks and a single KV head for test rows) - ~4x parameters, ~2x inference time on large training sets, unchanged KV cache and cached single-row latency; (3) new per-cell encodings: learned Fourier features (32 frequencies) and in-context ECDF rank features (4 harmonics, bucketed) on top of the standardized value and missing/inf indicators; (4) extra normalization (QK-norm, post-encoder LayerNorm, pre-head RMSNorm); (5) simpler preprocessing - no quantile/robust-scaling/SVD variants, one recipe, 768 (was 500) features per estimator, softmax temperature 1.0 (was 0.9); (6) recommended feature limit raised 2,000 -> 6,000 and ceiling to 20,000, rows still 1M, classes still 160; (7) prior tuned to high-cardinality, wide and grouped data (TabICLv2-inspired); (8) built-in text (tf-idf/SVD) and datetime preprocessing in the OSS package; (9) smaller classification KV cache (decoder keys cached); (10) results: TabArena Elo 1866 vs 1631 (+235), TALENT avg rank 2.95 vs 4.48 (274 datasets) / 2.13 vs 3.20 (337), ScoringBench rank 2.85 vs 7.64, first on BeyondArena/STRABLE/MulTaBench, beats TabPFN-TS-3 on fev-bench; (11) new alpha Fast checkpoint (84 M, 8 ICL blocks, 4 estimators, up to 3x faster than TabPFN-3); Plus gets FP8 attention and better text/date handling, Thinking is 12x faster than TabPFN-3-Thinking and adds group/time columns; (12) code license changed from Prior Labs License (Apache 2.0 + attribution) to plain Apache 2.0; weights license TABPFN-3.5 License v1.0 (same non-commercial terms as TabPFN-3's).",
+  "sources": [
+    {
+      "title": "[1] TabPFN-3.5: Technical Report (arXiv 2609.17895, v1 15 Sep 2026)",
+      "url": "https://arxiv.org/abs/2609.17895"
+    },
+    {
+      "title": "[2] TabPFN-3.5: Technical Report - HTML full text (architecture, prior, license, benchmark tables)",
+      "url": "https://arxiv.org/html/2609.17895v1"
+    },
+    {
+      "title": "[3] Prior Labs blog: TabPFN-3.5: Technical Report (release post, 15 Sep 2026)",
+      "url": "https://priorlabs.ai/technical-reports/tabpfn-3-5"
+    },
+    {
+      "title": "[4] Prior Labs product page: TabPFN-3.5",
+      "url": "https://priorlabs.ai/tabpfn-3-5"
+    },
+    {
+      "title": "[5] Prior Labs docs changelog: TabPFN-3.5",
+      "url": "https://docs.priorlabs.ai/changelog/tabpfn-3.5"
+    },
+    {
+      "title": "[6] Prior Labs docs: Models (limits, availability, model license FAQ)",
+      "url": "https://docs.priorlabs.ai/models"
+    },
+    {
+      "title": "[7] Prior Labs docs: Fast model (alpha)",
+      "url": "https://docs.priorlabs.ai/capabilities/fast-checkpoint"
+    },
+    {
+      "title": "[8] Prior Labs docs: Thinking mode",
+      "url": "https://docs.priorlabs.ai/capabilities/thinking-mode"
+    },
+    {
+      "title": "[9] Prior Labs docs: API metering (tokens, free budgets)",
+      "url": "https://docs.priorlabs.ai/api-reference/metering"
+    },
+    {
+      "title": "[10] Prior Labs docs: API rate limits",
+      "url": "https://docs.priorlabs.ai/api-reference/rate-limits"
+    },
+    {
+      "title": "[11] Prior Labs docs: Preprocessing (checkpoint defaults, text/date handling, subsampling)",
+      "url": "https://docs.priorlabs.ai/improving-performance/preprocessing"
+    },
+    {
+      "title": "[12] Prior Labs docs: Model parameters (softmax temperature, n_estimators)",
+      "url": "https://docs.priorlabs.ai/improving-performance/model-parameters"
+    },
+    {
+      "title": "[13] Prior Labs docs: Feature selection (768 features per estimator, 6k/20k columns)",
+      "url": "https://docs.priorlabs.ai/improving-performance/feature-selection"
+    },
+    {
+      "title": "[14] Prior Labs docs: OOM errors (VRAM table, subsampling)",
+      "url": "https://docs.priorlabs.ai/troubleshooting/OOM-errors"
+    },
+    {
+      "title": "[15] Prior Labs docs: FAQ (GPU requirements, KV-cache memory)",
+      "url": "https://docs.priorlabs.ai/faq"
+    },
+    {
+      "title": "[16] Prior Labs docs: Fine-tuning",
+      "url": "https://docs.priorlabs.ai/capabilities/fine-tuning"
+    },
+    {
+      "title": "[17] Prior Labs docs: KV cache",
+      "url": "https://docs.priorlabs.ai/capabilities/kv-cache"
+    },
+    {
+      "title": "[18] Prior Labs docs: Text features (Plus text limits)",
+      "url": "https://docs.priorlabs.ai/capabilities/text-features"
+    },
+    {
+      "title": "[19] Prior Labs docs: Many Class Classifier",
+      "url": "https://docs.priorlabs.ai/capabilities/many-class"
+    },
+    {
+      "title": "[20] Prior Labs docs: Accessing model weights (license gate)",
+      "url": "https://docs.priorlabs.ai/models/accessing-model-weights"
+    },
+    {
+      "title": "[21] Prior Labs docs: Selecting model version",
+      "url": "https://docs.priorlabs.ai/models/selecting-model-version"
+    },
+    {
+      "title": "[22] Prior Labs docs: Amazon SageMaker (marketplace pricing note)",
+      "url": "https://docs.priorlabs.ai/integrations/sagemaker"
+    },
+    {
+      "title": "[23] Prior Labs docs: Distillation (enterprise-only)",
+      "url": "https://docs.priorlabs.ai/capabilities/distillation"
+    },
+    {
+      "title": "[24] GitHub PriorLabs/TabPFN README",
+      "url": "https://github.com/PriorLabs/TabPFN"
+    },
+    {
+      "title": "[25] GitHub PriorLabs/TabPFN LICENSE (Apache License 2.0)",
+      "url": "https://github.com/PriorLabs/TabPFN/blob/main/LICENSE"
+    },
+    {
+      "title": "[26] GitHub PriorLabs/TabPFN CHANGELOG.md (9.0.0, 2026-09-15)",
+      "url": "https://github.com/PriorLabs/TabPFN/blob/main/CHANGELOG.md"
+    },
+    {
+      "title": "[27] Hugging Face model card Prior-Labs/tabpfn_3_5",
+      "url": "https://huggingface.co/Prior-Labs/tabpfn_3_5"
+    },
+    {
+      "title": "[28] TABPFN-3.5 License v1.0 (weights license text)",
+      "url": "https://huggingface.co/Prior-Labs/tabpfn_3_5/blob/main/LICENSE"
+    },
+    {
+      "title": "[29] Checkpoint files and safetensors metadata (architecture + inference config)",
+      "url": "https://huggingface.co/Prior-Labs/tabpfn_3_5/tree/main"
+    },
+    {
+      "title": "[30] tabpfn 9.0.0 source (src/tabpfn/architectures/tabpfn_v3_5.py, inference_config.py)",
+      "url": "https://pypi.org/project/tabpfn/9.0.0/"
+    },
+    {
+      "title": "[31] Prior Labs pricing",
+      "url": "https://priorlabs.ai/pricing"
+    },
+    {
+      "title": "[32] TabArena PR #577: Add TabPFN-3.5 and TabPFN-3.5-Fast as registered TabPFN versions",
+      "url": "https://github.com/autogluon/tabarena/pull/577"
+    },
+    {
+      "title": "[33] TabPFN-3: Technical Report (predecessor; architecture hyper-parameters, prior)",
+      "url": "https://arxiv.org/abs/2605.13986"
+    },
+    {
+      "title": "[34] Prior Labs docs changelog: TabPFN-3",
+      "url": "https://docs.priorlabs.ai/changelog/tabpfn-3"
+    }
+  ],
+  "notes": "Dates: report dated 14 Sep 2026, arXiv v1 and Prior Labs release 15 Sep 2026, checkpoints dated 2026-09-09, tabpfn 9.0.0 released 2026-09-15. Variants that are NOT separate records: TabPFN-3.5-Plus (hosted/enterprise only; same open interface, proprietary native text and date processing, FP8-attention latency optimisations, 1.25x TabPFN-3 latency; limits 1M rows x 20k columns plus 50M-token/2,500-char text limits; ranks 2nd on STRABLE) and TabPFN-3.5-Thinking (hosted/enterprise only; test-time compute on top of Plus at fit time with effort medium/high, target metric, thinking_timeout_s, group_col/time_col/group_time_col for grouped/temporal data; limits 200k rows x 2,000 columns; TabArena Elo 1910, +44 over base, +20 on BeyondArena; 12x faster than TabPFN-3-Thinking; no LLMs or real data). TabPFN-3.5-Fast (alpha) is the separate record tabpfn-3.5-fast. TabArena Elo/time numbers are also stored in data/tabarena.json via tabarena_entry. Uncertainties: no training recipe or compute is disclosed anywhere (fields set to 'not stated'); number of synthetic datasets unknown; BeyondArena/STRABLE/MulTaBench/RelArena Elo values exist only as figures in the report (only the numbers quoted in text are recorded); per-token API prices are not public; 'embedding_dim' records the 1024-d ICL width (cell/group embedding width is 128); parameters_m uses the exact safetensors count 218,987,657 (report: 220 M). Architecture details beyond the report (3+3+24 blocks, 128 inducing points, 5000 regression buckets, 160-class ceiling, 768 features/estimator, ECDF bucket count) come from the checkpoint metadata and package source [29][30]."
+}

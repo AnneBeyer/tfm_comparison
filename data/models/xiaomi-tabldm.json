@@ -1,0 +1,164 @@
+{
+  "id": "xiaomi-tabldm",
+  "name": "Xiaomi-TabLDM",
+  "tabarena_entry": "Xiaomi-TabLDM (default)",
+  "family": "TabLDM (Xiaomi); TabICL-style column-then-row-then-ICL lineage",
+  "developer": "Xiaomi-TabLDM Team, Xiaomi Corporation / Xiaomi Research (core contributors: Penghui Wang, Wei Liu, Hong Wang, Chengyue Huang, Yuxi Sun, Zirui Wang, Hongming Huang, Quan Wang, Chunxiao Liu (corresponding), Erli Meng, Bin Wang; contributors: Zhenwei Xin, Ping Hou, Jie Yu)",
+  "organization_type": "company",
+  "release_date": "2026-09-03",
+  "paper_title": "Xiaomi-TabLDM: A Tabular Foundation Model Technical Report",
+  "links": {
+    "paper": "https://arxiv.org/abs/2609.03880",
+    "code": "https://github.com/xiaomi-research/xiaomi-tabldm",
+    "weights": "https://huggingface.co/occams/Xiaomi-TabLDM",
+    "docs": "https://github.com/xiaomi-research/xiaomi-tabldm#readme",
+    "pypi": null,
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/487"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": false,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights (checkpoints/clf_default.ckpt and checkpoints/reg_default.ckpt) are hosted on Hugging Face under the personal account 'occams' (user xinzhenwei, a listed contributor), not under a Xiaomi org; the repo was gated at first and has been public/ungated since ~2026-09-02 (TabArena PR #487 comment). The GitHub package is explicitly an 'inference-only build': its docstring states that 'Training, prior-data generation, fine-tuning, forecasting, unsupervised, and SHAP extras are intentionally excluded'. Not on PyPI: pip name 'Xiaomi-TabLDM' (import 'tabldm', version 0.1.0), installed with `pip install .` from the repo or via git+https (TabArena pins commit 6773a30). Requires Python >=3.10, torch>=2.2, scikit-learn>=1.3, einops, huggingface-hub, pandas; optional numba. No hosted API. Authors announced (PR #487, 2026-09-17) a 'significantly updated version' to be submitted separately."
+  },
+  "license": {
+    "code": "Apache-2.0",
+    "weights": "Apache-2.0 (per Hugging Face model card README: 'This project is released under the Apache License 2.0. Copyright (C) 2026 Xiaomi Corporation'; TabArena metadata lists license Apache-2.0, commercial use allowed)",
+    "prior_or_data": "not released (no synthetic-data generator or training data published; no separate license)",
+    "commercial_use": "yes",
+    "non_commercial_use": "yes",
+    "notes": "GitHub repo ships the full Apache License 2.0 text in LICENSE and SPDX-License-Identifier: Apache-2.0 headers in every source file; pyproject.toml classifier 'License :: OSI Approved :: Apache Software License'. The Hugging Face repo has NO license metadata tag (cardData/license empty) and no LICENSE file - its README's 'Apache License 2.0' link points to a LICENSE path that does not exist in the HF repo - so the weights license rests on the README statement (and the TabArena maintainers' 'Weights and code are Apache-2.0' note) rather than on HF license metadata. Apache-2.0 permits commercial and non-commercial use, modification and redistribution with attribution/notice retention; no share-alike or research-only restriction. Paper itself is under the arXiv perpetual non-exclusive license."
+  },
+  "architecture": {
+    "type": "column-then-row-then-ICL transformer (TabICL-style three-stage in-context learner) with a dual-stream column embedder, lightweight Attention-Residual connections and a sparse Mixture-of-Experts ICL backbone",
+    "parameters_m": 70.08,
+    "parameters_note": "Classifier: 70.08M total / 61.67M active per forward pass; regressor: 71.08M total / 62.68M active (Table 10; sparse MoE with top-1 of 2 routed experts + 1 shared expert in the last 8 of 24 ICL blocks). TabArena wrapper reports clf ~70.1M / reg ~71.1M. Both checkpoints share all architectural hyperparameters and differ only in the target encoder (OneHotAndLinear(10,512) vs Linear(1,512)) and the final output layer (10 vs 999 outputs).",
+    "layers": "3 induced self-attention (Set Transformer) blocks in the column stage + 3 row-wise transformer blocks + 24 ICL transformer blocks (dense FFN in blocks 1-16, sparse MoE FFN in the last 8)",
+    "embedding_dim": "128 in the column and row stages; 512 in the ICL stage (128 x 4 concatenated CLS tokens); FFN expansion factor 2 (hidden width 256 / 1024)",
+    "attention_heads": 8,
+    "attention_scheme": "Column stage: per-column Set Transformer with inducing-point attention (128 inducing points, 3 ISAB blocks, target-aware), query-aware scalable softmax (QASSMax, 'qassmax-mlp-elementwise': queries rescaled by an MLP of log n and a query-dependent tanh gate) in the first attention layer to generalise to large training sets. Row stage: self-attention over the column embeddings of one row prepended with 4 learnable CLS tokens, rotary positional embeddings (RoPE base 100,000, interleaved), pre-norm (RMSNorm), lightweight AttnRes connections (block size 4, stride 4). ICL stage: 24 blocks over the 512-d row embeddings in which training rows attend to each other and test rows attend only to training rows (no test-test attention), QASSMax, AttnRes (block size 4, stride 4), sparse MoE FFN in the last 8 blocks (linear router, top-1 of 2 routed experts + 1 always-on shared expert, each a 2-layer GELU MLP with hidden width 1024). FlashAttention-2 used in pretraining; inference supports AMP, optional FlashAttention-3 on Hopper GPUs, and a KV cache of the training-context projections for repeated predict() calls. Runtime complexity O(n^2 + n m^2) for n training rows and m columns (README FAQ).",
+    "checkpoints": "separate classification & regression checkpoints (checkpoints/clf_default.ckpt, checkpoints/reg_default.ckpt), trained separately with the same architecture",
+    "regression_head": "distributional: 999 predicted quantiles trained with a pinball loss; decoder Linear(512,1024) -> GELU -> Linear(1024,999); quantiles are made monotone (sort/cummax/isotonic) and converted to a distribution (QuantileToDistribution, optional tail extrapolation) giving mean, variance and arbitrary quantiles; classification decoder Linear(512,1024) -> GELU -> Linear(1024,10) with softmax temperature 0.9",
+    "feature_embedding": "Dual-stream feature grouping: each column j is grouped with two other columns chosen by circular shifts over the m columns (group size 3) and the triple is encoded by a shared Linear(R^3 -> R^128). Stream 1 uses TabICLv2's fixed dyadic offsets (1,2,4); stream 2 uses width-adaptive offsets (1, floor(sqrt(s)), s) with s = min(32, m-1) (collisions on narrow tables resolved by shifting an offset). The two stream embeddings are summed, then each grouped column is encoded independently by the Set Transformer (target-aware, i.e. training labels are injected into the column embedding) to give the column embeddings; the row stage aggregates them into one 512-d vector per row via 4 CLS tokens. Numerical and (ordinal-encoded) categorical features share the same pathway after sklearn-side preprocessing (outlier clipping at z=4, scaling/normalisation, feature permutation).",
+    "key_innovations": [
+      "Dual-stream column embedder: adds a second, width-adaptive circular-shift feature-grouping stream (offsets 1, floor(sqrt(s)), s; s = min(32, m-1)) to TabICLv2's dyadic (1,2,4) stream and sums the two embeddings, breaking feature symmetries at two granularities",
+      "Lightweight Attention Residual (AttnRes, inspired by Kimi's Block AttnRes): replaces the plain additive residual with learned, input-dependent softmax weights (learnable pseudo-query over RMSNorm'd block outputs) applied every 4 layers over blocks of 4 in the row and ICL stages; reported as necessary to stop stage-1 training collapse on datasets beyond ~1,200 samples",
+      "Sparse Mixture-of-Experts in the last 8 of 24 ICL blocks: 2 routed experts with top-1 routing plus 1 shared expert, experts initialised from the frozen dense FFN, Switch-style load-balance loss (coef 1e-2) and router z-loss (coef 1e-3); ~70M total but ~62M active parameters",
+      "Three-stage dataset-size curriculum (1,024 -> 400-10,240 -> 400-60,000 samples) trained with the Muon optimiser; MoE and its auxiliary losses are switched on only from stage 2",
+      "Expanded SCM synthetic prior: TabICL-v2's random Cauchy DAG with 12 random-function classes and new 'combiner' mechanisms that compose/mix edge functions, extra transformation functions, Gaussian noise injection, and an ExtraTrees-vs-constant-predictor learnability filter",
+      "Context-adaptive test-time scaling: feature shuffling and feature subsampling per ensemble member, diverse preprocessing views (normalisations, quantile transform, SVD features, feature interactions, heavy-tail target transforms for regression), non-negative-least-squares combination of candidate views fitted on out-of-fold or holdout predictions, and probability calibration",
+      "999-quantile distributional regression head (pinball loss) exposing predictive mean/variance/quantiles",
+      "Length-generalisation tooling inherited from TabICLv2 (query-aware scalable softmax, RoPE base 100k, mixed-radix many-class ensembling) plus engineering for large tables: KV cache, AMP/FlashAttention-3 auto-selection, CPU/disk offloading of column-embedding outputs"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 10,
+    "max_classes_note": "Pretrained with max_classes=10 (10-way output head). Tasks with more than 10 classes are handled automatically (support_many_classes=True, default) by TabICLv2-style mixed-radix ensembling at the column-embedding stage (labels re-encoded into D digits over balanced bases <= 10, one column-transformer pass per digit view, outputs averaged) plus hierarchical classification in the ICL stage, so an arbitrary number of classes is supported without retraining; the KV cache is not available for >10 classes.",
+    "max_features": null,
+    "max_features_note": "No hard limit documented; README FAQ: pretraining covered 'a few to more than one hundred feature columns' and the model 'can extrapolate to larger scales, although accuracy may decline'; 'Specific recommended ranges will be added after empirical evaluation.' The sklearn estimators subsample columns per ensemble member when the table exceeds max_num_features (default 300 in current classifier and regressor source; regressor docstring says 500). Column-stage cost grows as O(n m^2).",
+    "max_samples": null,
+    "max_samples_note": "No hard limit documented. Stage-3 pretraining used datasets of up to 60,000 samples (~80% as context, i.e. up to ~48K context rows); README FAQ says pretraining 'covers hundreds to tens of thousands of training samples' and larger scales are extrapolation. Attention is quadratic in n (O(n^2)); memory is managed by AMP, FlashAttention-3 (auto-enabled for n >= 10,240), smaller ensemble batches and CPU/disk offloading rather than by subsampling. Evaluated on TALENT datasets including some with >100K training rows.",
+    "missing_values": "preprocessing",
+    "categorical_features": "Categorical columns (string/object/category/bool in DataFrames, or user-supplied categorical_indices) are ordinal-encoded by the built-in TransformToNumerical preprocessing, with a separate category for missing values; optional random permutation of category codes per ensemble member (cat_random_encode). Missing numerical values (NaN) are mean-imputed. Integer columns in NumPy arrays are treated as numerical.",
+    "text_features": false,
+    "other": "Predictive distributions for regression (mean, variance, quantiles via predict_stats / regression_quantiles tutorial); probability outputs with temperature-scaled softmax and optional calibration; row-embedding extraction (paper Sec. 4.5 PCA analysis); KV cache for repeated prediction on the same training context; save/load of fitted estimators with optional weights/training data/KV cache; CPU/disk offloading; scikit-learn-compatible API. No text/time-series/unsupervised support in the released package."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Structural-causal-model prior extending TabICL-v2 (Fig. 5). (1) Dataset configuration: sample size, numerical and categorical feature counts, categorical cardinalities, target type and context-query split are drawn per task. (2) Graph-based generation: a DAG is sampled with TabICL-v2's random Cauchy graph mechanism; latent node representations are propagated in topological order using node computations drawn from 12 random-function classes (smooth nonlinear mappings, localized responses, piecewise transitions, highly irregular surfaces), with new 'combiner' mechanisms that compose and mix multiple edge functions, additional transformation functions that broaden smoothness/sparsity/additivity/local structure, and injected Gaussian noise. (3) Tabular construction: observed features and the target are assigned to sampled nodes; numerical features and regression targets come from continuous latent dimensions, categorical features and classification targets from discretisation or categorical sampling; unobserved nodes provide latent variation; random scaling varies feature/node importance. (4) Post-processing and filtering: tables are standardised and randomly permuted; the graph is resampled if features and target share no common ancestor; tasks on which an ExtraTrees model cannot reliably beat a constant predictor are rejected; retained datasets are split into context and query sets. Classification tasks have at most 10 classes. No tree- or GP-based generators are described.",
+    "synthetic_prior_types": ["SCM (random Cauchy DAG, 12 random-function classes with combiners)"],
+    "num_synthetic_datasets": null,
+    "num_synthetic_datasets_note": "Not stated. The report gives only step counts (500K/300K + 40K + 10K) and not the number of datasets per step, so the total number of synthetic datasets cannot be derived.",
+    "real_data": "none - 'pretrained exclusively on synthetic data'; no real-data fine-tuning stage is described",
+    "objective": "Classifier: cross-entropy on the query rows; regressor: pinball (quantile) loss over 999 quantile levels. From stage 2 on, MoE auxiliary losses are added per MoE layer: Switch-style load-balance loss (alpha_bal = 1e-2) and router z-loss (alpha_z = 1e-3), summed over layers and scaled by lambda = 1.0.",
+    "optimizer": "Muon optimiser (implementation from TabICLv2), cosine learning-rate schedule, weight decay 0.01; max LR 8e-4 (stage 1), 1e-4 (stage 2), 2e-5 (stage 3); gradient clipping 10 (stages 1-2) and 1 (stage 3)",
+    "training_steps": "Stage 1: 500K steps (classifier) / 300K steps (regressor); Stage 2: 40K steps; Stage 3: 10K steps (classification and regression models trained separately)",
+    "batch_size": "not stated",
+    "hardware": "8x NVIDIA A100 80 GB",
+    "compute": "Wall-clock: ~7-10 days (stage 1) + 2 days (stage 2) + 2 days (stage 3) on 8 A100-80GB, i.e. ~11-14 days; derived ~2,100-2,700 A100-GPU-hours. FlashAttention-2 enabled from stage 2 onward.",
+    "training_cost_note": "No monetary cost stated. The report does not say whether the quoted 11-14 days covers one model or both the classifier and the regressor (they are trained separately, with the regressor's stage 1 being 300K instead of 500K steps), so total compute could be up to ~2x the derived figure. The shorter regression schedule is attributed to AttnRes stabilising convergence.",
+    "curriculum": "Three-stage dataset-size curriculum: Stage 1 on datasets of 1,024 samples with 30-90% used as training context (dense FFN blocks only); Stage 2 on 400-10,240 samples (log-uniform), ~80% context, MoE + auxiliary losses enabled (experts initialised from the frozen dense FFN); Stage 3 on 400-60,000 samples (log-uniform), ~80% context, low LR (2e-5) and clip 1 to adapt to long-context, large-sample inference."
+  },
+  "icl": {
+    "max_context_rows": null,
+    "context_note": "No architectural cap: all provided training rows form the context in a single forward pass (attention with QASSMax length scaling). Pretraining contexts reached ~48K rows (80% of 60,000-sample stage-3 datasets); README describes hundreds to tens of thousands of training samples as the covered regime, beyond which accuracy may decline.",
+    "large_dataset_strategy": "Full-context in-context learning without subsampling, retrieval or chunking (paper describes none). Scale is handled by engineering: automatic AMP for n >= 1,024 or >= 60 features, FlashAttention-3 for n >= 10,240 (auto heuristics in base.py), batching of ensemble members (batch_size default 4; 'auto' picks 8/4/2/1 by n x m cells), CPU/disk offloading of column-embedding outputs when GPU memory is short, and per-estimator feature subsampling to max_num_features=300 columns for wide tables. Test rows attend only to training rows, so test sets can be processed in batches against a cached context (KV cache).",
+    "test_time_ensembling": "Base configuration (README / checkpoint 'default' mode): n_estimators=8 ensemble members differing in feature permutation (latin-hypercube shuffles), class-label shift, normalisation view (none/power) and outlier clipping (z=4), with logits averaged and softmax temperature 0.9. Current classifier source defaults differ (n_estimators=16, random feature shuffling). Optional 'enhanced' test-time scaling (enhance_candidates=True; on by default in the current classifier source, off in the regressor source and in the release used by TabArena): extra candidate groups (quantile-normalised, SVD + cross-feature, 'adaptive_plus' with PCA decorrelation and interaction features (16-32 estimators depending on width), Gaussian-rank normalised), NNLS weights over candidates fitted on 5-fold out-of-fold predictions (single 20% holdout when the holdout would exceed 2,000 rows), and probability calibration (lambda 1e-2); for regression additionally a high-kurtosis target-transform group (asinh / Yeo-Johnson, 8 candidates when excess kurtosis > 10) and a 0.25 blend with the equal-weight ensemble. The paper reports that this test-time compute scaling 'consistently improves predictive performance over the base model' but gives no ablation numbers.",
+    "fine_tuning": "Not supported in the released package (training/fine-tuning code intentionally excluded); the model is used purely via in-context learning, 'without requiring task-specific fine-tuning'. Paper does not report fine-tuning experiments.",
+    "inference_notes": "fit() only preprocesses the context and loads the checkpoint (downloaded from Hugging Face on first use); prediction is one forward pass per ensemble member. KV cache (kv_cache=True) stores the training-context projections built during fit for repeated predict() calls (not available for >10 classes or with enhanced candidates). Runs on CPU or CUDA (device auto-selected); GPU recommended for larger datasets. TabArena wrapper uses refit_folds=True with sequential fold fitting."
+  },
+  "speed": {
+    "hardware_note": "Paper's TabArena timings are median seconds per 1K samples from the TabArena pipeline (GPU model not stated in the paper). The official TabArena leaderboard measures the model on its GPU pipeline; the v0.1.9 rerun (PR #584, 2026-09-16 suite) excludes one-off warm-up (imports, CUDA context, checkpoint loading), which cut its median fit time from 4.85 s to 1.12 s per 1K rows (Elo unchanged).",
+    "memory_note": "Runtime/memory O(n^2 + n m^2) per ensemble member; batch_size (ensemble members per forward pass, default 4; README shows 4 or 8) trades time for memory without changing results; 'auto' heuristics reduce it for >2M/5M/10M cells. Column-embedding outputs can be offloaded to CPU (pinned memory up to 32 GB) or memory-mapped disk when they exceed 50% of free GPU memory (offload_mode='auto'). KV caching needs extra GPU/CPU memory. AMP and FlashAttention-3 (Hopper) reduce memory for large n.",
+    "speed_claims": "On TabArena regression (paper's own run) Xiaomi-TabLDM needs 6.99 s training and 3.12 s prediction per 1K samples vs 38.85 s / 9.67 s for TabFM - '82% less training time and 68% less prediction time' - while reaching the second-highest Elo; overall TabArena run: 10.92 s train / 4.18 s predict per 1K. Claimed favourable performance-efficiency trade-off 'at a model scale comparable to TabPFN-3'. Sparse MoE keeps activated compute at ~62M of ~70M parameters. KV caching 'significantly accelerat[es] repeated inference'.",
+    "inference_cost_note": "Free local inference (Apache-2.0 weights); no hosted API or pricing. GPU recommended; CPU inference possible (n_jobs threads)."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": true,
+      "source": "Technical report Sec. 4.1 / Fig. 6 / App. B.2 (https://arxiv.org/abs/2609.03880); README figure assets/Xiaomi-TabLDM_TALENT.png",
+      "protocol_note": "TALENT benchmark, 300 datasets (120 binary, 80 multiclass, 100 regression; 218 with <10K, 78 with 10K-100K, 4 with >100K training rows), evaluated 'following the TabICLv2 evaluation protocol'; methods with missing results on some datasets are imputed with K-nearest-neighbour values per that protocol; classification metric = Accuracy (regression metric not stated explicitly, TALENT's default is RMSE); results are average ranks across datasets (lower is better) with 95% bootstrap CIs. Baselines include TabFM, EXAONE-Tabular, TabPFN-v3, TabICL-v2, TabPFN-v2.6 and others.",
+      "avg_rank": 4.82,
+      "elo": null,
+      "win_rate_vs": null,
+      "other": "Overall avg rank 4.82 = 2nd (TabFM 4.23 1st; EXAONE-Tabular 4.96, TabPFN-v3 5.55, TabICL-v2 6.15, TabPFN-v2.6 6.79). Regression (100 datasets): avg rank 4.03 = 2nd (TabFM 3.72; EXAONE-Tabular 4.15, TabPFN-v3 4.88, TabICL-v2 6.10, TabPFN-v2.6 6.33). Binary classification: avg rank 5.72, tied 1st with TabFM (EXAONE-Tabular 6.38, TabPFN-v3 6.80, TabICL-v2 6.90). Multiclass-only rank not reported. Elo and pairwise win rates are not reported for TALENT."
+    },
+    "other": [
+      {
+        "name": "TabArena - paper's own evaluation, overall (51 datasets / 816 tasks; NOT the official leaderboard run)",
+        "value": "Elo 1659 (95% CI -55/+86), 4th by Elo point estimate behind TabFM 1782, EXAONE-Tabular 1762 and AutoGluon 1.5 extreme 1662; ahead of TabPFN-3 1650, TabPFN-2.6 1596, RealTabPFN-2.5 (T+E) 1579, TabICLv2 1576; 3.1 dataset wins; improvability 9.7%; median train 10.92 s / predict 4.18 s per 1K samples",
+        "source": "https://arxiv.org/abs/2609.03880 (Table 11, Sec. 4.2.1, App. B.1.3)"
+      },
+      {
+        "name": "TabArena - paper's own evaluation, regression subset (13 datasets)",
+        "value": "Elo 1900 (-148/+278), 2nd behind TabFM 2019; ahead of EXAONE-Tabular 1885, TabPFN-3 1800, AutoGluon 1.5 extreme 1776, TabPFN-2.6 1741, RealTabPFN-2.5 (T+E) 1736, TabICLv2 1679; 1.8 dataset wins; improvability 1.7% (TabFM 1.6%); train 6.99 s / predict 3.12 s per 1K (82% / 68% less than TabFM's 38.85 s / 9.67 s); pairwise win rate 67% vs AutoGluon 1.5 and 78% vs TabICLv2",
+        "source": "https://arxiv.org/abs/2609.03880 (Table 2 / Table 12, Fig. 7)"
+      },
+      {
+        "name": "OpenML-CTR23 (regression, 33 of the 35 curated datasets)",
+        "value": "Best average rank 3.03 (1st); TabPFN-v3 3.71, TabICL-v2 4.55, LimiX 5.91 (metric not stated; average rank, lower is better)",
+        "source": "https://arxiv.org/abs/2609.03880 (Sec. 4.4, Fig. 2)"
+      },
+      {
+        "name": "BCCO (Balanced Comprehensive Challenging Omni-domain; 106 classification + 50 regression datasets, <=50K rows, <=10K features, <=10 classes)",
+        "value": "Regression mean rank 2.940 (2nd; TabFM 2.680, EXAONE-Tabular 3.400, TabPFN-v3 3.560, TabICL-v2 4.780, LimiX 6.500); multiclass: Accuracy 4.171 (2nd), AUC 4.257 (4th), LogLoss 3.971 (2nd); overall (156 datasets): Accuracy 4.451 (3rd), AUC 4.154 (3rd), LogLoss 3.819 (3rd) behind TabFM (3.694/3.095/3.064) and EXAONE-Tabular (4.436/3.731/3.625)",
+        "source": "https://arxiv.org/abs/2609.03880 (Sec. 4.3, Table 3, Fig. 9)"
+      },
+      {
+        "name": "Synthetic noise-sensitivity study (App. C; 2,240 SCM regression datasets, 32 variables, 14 noise conditions x 2 graph densities x 4 SNR levels)",
+        "value": "Highest R^2 on 1,575 / 2,240 datasets = 70.3% first-place share vs LimiX 16.0% and TabICLv2 13.7%; lowest per-condition share 63.8% (Laplace, Student-t), highest 78.1% (Exponential); 65.6% under the noise-free reference",
+        "source": "https://arxiv.org/abs/2609.03880 (Appendix C)"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "First public release (v1, package 0.1.0); no earlier TabLDM version was published. Its closest architectural ancestor is TabICLv2, from which it reuses the column-then-row-then-ICL layout, dyadic circular-shift feature grouping, the random Cauchy-graph SCM prior, the query-aware scalable softmax, the Muon training recipe and mixed-radix many-class ensembling. On top of that it adds a second width-adaptive column stream, lightweight Attention-Residual connections (row and ICL stages), a sparse MoE FFN in the last 8 of 24 ICL blocks, an expanded prior with 12 random-function classes plus combiner mechanisms, a three-stage size curriculum to 60K-sample datasets, a 999-quantile regression head, and an NNLS/calibration-based test-time scaling pipeline. Source-code docstrings reference internal 'TabLDMv1'/'TabLDMv2' checkpoint variants (differing in RoPE layout and init) and internal 'MiTab' reference implementations, indicating an unpublished internal lineage; the authors state that an improved version is in preparation (TabArena PR #487, 2026-09-17).",
+  "sources": [
+    {"title": "arXiv abstract page: Xiaomi-TabLDM: A Tabular Foundation Model Technical Report (arXiv:2609.03880, v1 2026-09-03, v2 2026-09-04)", "url": "https://arxiv.org/abs/2609.03880"},
+    {"title": "arXiv HTML full text of the technical report (sections 2-4, Appendix A hyperparameter tables 4-10, Appendix B leaderboard tables 11-12, Appendix C)", "url": "https://arxiv.org/html/2609.03880"},
+    {"title": "GitHub repository xiaomi-research/xiaomi-tabldm (created 2026-09-01)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm"},
+    {"title": "GitHub README (installation, usage, defaults, FAQ on dataset sizes, preprocessing, license section)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/README.md"},
+    {"title": "GitHub LICENSE (Apache License 2.0 full text)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/LICENSE"},
+    {"title": "pyproject.toml (pip name Xiaomi-TabLDM, license file, dependencies, Python >=3.10)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/pyproject.toml"},
+    {"title": "tabldm/__init__.py (inference-only build statement: training, prior generation, fine-tuning excluded)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/__init__.py"},
+    {"title": "tabldm/_model/tabldm.py (architecture defaults and docstring: max_classes, 999 quantiles, QASSMax, RoPE)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/_model/tabldm.py"},
+    {"title": "tabldm/_model/attnres_light_rmsnorm_moe.py and moe.py (MoE presets, routing, auxiliary losses)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/_model/attnres_light_rmsnorm_moe.py"},
+    {"title": "tabldm/_sklearn/classifier.py (estimator defaults, many-class handling, max_num_features, NNLS/calibration test-time scaling)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/_sklearn/classifier.py"},
+    {"title": "tabldm/_sklearn/regressor.py (regressor defaults, quantile and high-kurtosis candidate groups)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/_sklearn/regressor.py"},
+    {"title": "tabldm/_sklearn/base.py (AMP / FlashAttention-3 / batch-size heuristics by dataset size)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/_sklearn/base.py"},
+    {"title": "tabldm/_model/inference_config.py (CPU/disk offloading configuration)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tabldm/_model/inference_config.py"},
+    {"title": "Tutorials README (checkpoint locations, KV cache, quantile examples)", "url": "https://github.com/xiaomi-research/xiaomi-tabldm/blob/main/tutorials/README.rst"},
+    {"title": "Hugging Face model repo occams/Xiaomi-TabLDM (checkpoints clf_default.ckpt / reg_default.ckpt; created 2026-08-28; no license metadata)", "url": "https://huggingface.co/occams/Xiaomi-TabLDM"},
+    {"title": "Hugging Face model card README (Apache License 2.0 statement, Copyright (C) 2026 Xiaomi Corporation)", "url": "https://huggingface.co/occams/Xiaomi-TabLDM/blob/main/README.md"},
+    {"title": "Hugging Face API metadata for occams/Xiaomi-TabLDM (gated=false, private=false, tags arxiv:2609.03880, cardData empty)", "url": "https://huggingface.co/api/models/occams/Xiaomi-TabLDM"},
+    {"title": "TabArena PR #487 '[New Model] Add TabLDM foundation model' (merged 2026-09-14; ~70M params, MoE1 architecture, gating/licensing discussion, model-vs-system submission, 'base version without enhancement methods')", "url": "https://github.com/autogluon/tabarena/pull/487"},
+    {"title": "TabArena PR #584 rerun on the new timing pipeline (Xiaomi-TabLDM Elo 1581 unchanged; train time per 1K rows 4.85 s -> 1.12 s)", "url": "https://github.com/autogluon/tabarena/pull/584"},
+    {"title": "TabArena wrapper metadata models/tabldm/info.py (license Apache-2.0, pinned commit 6773a30, suite tabarena-2026-09-16)", "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabldm/info.py"},
+    {"title": "TabArena wrapper models/tabldm/model.py (uses TabLDMEnhancedClassifier/Regressor, refit_folds, GPU required)", "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/tabldm/model.py"},
+    {"title": "TabArena leaderboard (row 'Xiaomi-TabLDM (default)', verified, Apache-2.0, commercial use allowed; snapshot 2026-09-23 in data/raw/tabarena)", "url": "https://tabarena-leaderboard.hf.space"}
+  ],
+  "notes": "Fact-checked against the arXiv HTML (v2), the GitHub source at HEAD (2026-09-22) and at the commit TabArena pinned (6773a30), the HF repo, and TabArena PRs #487/#584. Open points: (1) pretraining batch size and the number of synthetic datasets are not reported; (2) the 11-14 day / 8xA100 compute statement is ambiguous as to whether it covers one or both task-specific models; (3) the paper's TabArena numbers (Elo 1659 overall, 1900 regression) come from the authors' own evaluation and are well above the official leaderboard row 'Xiaomi-TabLDM (default)' (Elo 1585 overall / 1747 regression in the 2026-09-23 snapshot, verified run of TabArena suite 2026-09-16) - the official entry is, per the authors, 'the base version of our model without enhancement methods' (8-estimator default, enhance_candidates=False, internal validation splitting removed to qualify as a model submission), whereas the paper describes an NNLS/calibration test-time-scaling pipeline; a new PR with an 'enhanced' version was announced; (4) the README documents n_estimators=8 / enhance off, but the current classifier source defaults to n_estimators=16, random feature shuffling and enhance_candidates=True (regressor: 8, latin, off) - defaults are in flux; (5) the HF repo carries no license tag or LICENSE file, so the weights license is inferred from the model-card text and TabArena's metadata; (6) GPU model used for the paper's timing tables is not stated; (7) no hard limits on features/samples are documented (feature subsampling to 300 columns per estimator and quadratic attention cost are the practical constraints); (8) parameters_m records the classifier (70.08M total); the regressor has 71.08M."
+}

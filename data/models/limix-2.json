@@ -1,0 +1,255 @@
+{
+  "id": "limix-2",
+  "name": "LimiX-2",
+  "tabarena_entry": "LimiX-2 (default)",
+  "family": "LimiX",
+  "developer": "LimiX Team, Stable AI (Stable AI Technology Co., Ltd. / Wen Zhun (Xiong'an) Technology Co., Ltd.) & Tsinghua University; project lead Xingxuan Zhang, Peng Cui",
+  "organization_type": "mixed",
+  "release_date": "2026-09-16",
+  "paper_title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence",
+  "links": {
+    "paper": "https://arxiv.org/abs/2609.17488",
+    "code": "https://github.com/limix-ldm-ai/LimiX",
+    "weights": "https://huggingface.co/stable-ai/LimiX-2",
+    "docs": "https://www.limix.ai/doc/",
+    "pypi": null,
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/575"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": false,
+    "training_code_released": false,
+    "prior_code_released": false,
+    "notes": "Weights (LimiX-2.ckpt, 1.63 GB fp32, single file) and inference code released 16 Sep 2026 on GitHub (limix-ldm-ai/LimiX, package 'LimiX' v2.0.0, not on PyPI, installed from git; Python >= 3.12, torch==2.9.1 pinned, flash-attn recommended) and Hugging Face (stable-ai/LimiX-2); a ModelScope mirror (modelscope.cn/organization/stable-ai) is linked. The repository contains only inference/model code (pyproject description: 'LimiX tabular foundation model inference'); no training, fine-tuning or synthetic-data-generation code is public. No hosted API exists and the weights license forbids offering one. The docs site (limix.ai/doc) mirrors the README."
+  },
+  "license": {
+    "code": "Stable AI Technology Co., Ltd. License v1.0 (Sept 2026): Apache-2.0-derived (Sections 1-9 reproduce Apache 2.0) plus Section 10 attribution/naming clause; GitHub/SPDX: Other / NOASSERTION",
+    "weights": "StableAI LimiX Non-Commercial License v1.0 (Sept 2026), custom; HF metadata: license: other, license_name: stableai-limix-non-commercial-license-v1.0",
+    "prior_or_data": "not released (synthetic-data generator and pretraining data are not public; no license)",
+    "commercial_use": "no",
+    "non_commercial_use": "yes",
+    "notes": "WEIGHTS: the license states it 'is not an open source license and does not grant commercial usage rights'. Permitted: academic/scientific research, education, evaluation, benchmarking, personal experimentation, non-commercial data-science competitions (e.g. Kaggle) and non-commercial demos; research by a commercial entity does not qualify if it supports commercial objectives. Prohibited without a separate commercial agreement with Stable AI: any Commercial Purpose incl. production deployment, internal business operations, consulting, SaaS/API/hosted inference/managed services, commercial agentic or MoE systems. Outputs/embeddings may not be used to train, distill, evaluate or improve a 'Competing Foundation Model' (tabular, structured, time-series or graph foundation models) for commercial or competitive purposes. Derivative models (fine-tunes, LoRA, distillations) may only be distributed under the same license. Attribution 'Built with StableAI LimiX' is required when distributing, publicly demonstrating, or publishing research based on the model. Acceptable-use policy; rights terminate on violation (30-day cure). CODE: Apache-2.0 terms plus Section 10: distributions/products built on the code must ship the license and display 'Built with StableAI LimiX'; models trained/fine-tuned/distilled with the Work must carry 'LimiX' at the start of their name; internal research/benchmarking without distribution is exempt. Sibling checkpoints LimiX-16M / LimiX-2M / LimiX-1_16M / LimiX-1_2M are now published under the Stable AI Technology Co., Ltd. License v1.0 (Apache-derived, commercial use allowed with attribution); the original 2025 LimiX v1 release was Apache 2.0. TabArena registers LimiX-2 with commercial_use=False."
+  },
+  "architecture": {
+    "type": "Contextual Mechanism Network (CMN): cell-level dual-axis (sample-axis + feature-axis) in-context-learning transformer with decoupled feature and task pathways",
+    "parameters_m": 406.2,
+    "parameters_note": "Paper: 406.2M (largest of six scaling-study sizes, 12.5M-406.2M). Verified by summing tensor shapes in the released LimiX-2.ckpt: 406,232,101 parameters (transformer encoder 357.9M, regression decoder 24.7M, classification decoder 21.0M, rest encoders/adapters). README/TabArena round to 400M. Single checkpoint for all tasks. Paper notes LimiX-2 is ~4x smaller than TabFM.",
+    "layers": "24 dual-axis transformer blocks; each block: independent sample-axis attention for feature cells and for target slots -> independent SwiGLU FFNs (feature FFN and task FFN) -> asymmetric feature-axis attention -> residuals (checkpoint layer_arch 'smf')",
+    "embedding_dim": 256,
+    "attention_heads": 8,
+    "attention_scheme": "Sample-axis attention per column position: context rows attend to each other, query rows attend only to context (predictions invariant to query-batch composition; Q/K/V maps shared across feature columns but separate for the target stream; the K=4 target slots are concatenated for sample-axis attention). Feature-axis attention is asymmetric: feature cells attend to features + target, target slots attend only to features, with unshared Q/K/V for the two streams ('decoupled' feature-attention pipeline in code). All K/V heads are used in cross attention (v1 used a single K/V head). Q and K are RMS-normalised and queries are rescaled per head by a learnable length-dependent factor s_h=(1+w_h*log n)*beta_h (tanh-truncated; 'softmax scaling MLP'). Pre-normalised RMSNorm everywhere (Triton kernels), FlashAttention used at inference. 8 heads / hidden FFN dim 1024 come from the checkpoint config (nhead=8, hid_dim=1024), not the paper.",
+    "checkpoints": "single multitask checkpoint (classification, regression, missing-value imputation, feature-attention-based causal skeleton recovery)",
+    "regression_head": "distributional: target range split into B=5000 ordered bins (fixed borders on [-10,10] after target normalisation); softmax over bins, prediction = probability-weighted bin centres; decoder MLP linear-1024-GELU-linear-5000; replaces v1's MSE head",
+    "feature_embedding": "Each cell x_ij -> R^256 via a two-layer MLP with RMSNorm + GELU shared by all columns; missing (and pretraining-masked) cells use one shared learnable embedding; column identity added via low-rank discriminative feature encoding (s=d/4=64-dim column code projected to 256); features handled in groups of 2 (features_per_group=2) with a small feature-group encoder. Targets encoded into K=4 slot embeddings of 256 dims (regression: MLP encoder; classes: orthogonally initialised embedding table of 10 entries; query targets: learnable MASK), plus a task-type (cls/reg) embedding. Classification head: MLP to 10 logits (cross-entropy). Heads sit at different depths: masked-feature reconstruction (MSE) head after layer 5 of 24, classification/regression heads on the final layer's 4 concatenated task slots, each preceded by a bottleneck post-adapter (linear-64/128-GELU-linear-256).",
+    "key_innovations": [
+      "Contextual Mechanism Network paradigm: models the joint p(x, y | D_context) via multiple conditional prediction tasks per table instead of the PFN target-only p(y | x, D_context)",
+      "Decoupled feature and task pathways with asymmetric feature-axis attention (features <-> target vs. target -> features only) and separate SwiGLU FFNs; extra capacity allocated mainly to the task pathway",
+      "K=4 task-embedding slots per row instead of one task embedding; task-type embedding",
+      "Length-stable multi-head attention: QK-norm plus learnable length-dependent per-head query scaling; all K/V heads in cross attention; pre-norm RMSNorm",
+      "5000-bin distributional regression head (was MSE) and depth-specific heads with bottleneck post-adapters (reconstruction head at shallow depth 5, task heads at depth 24)",
+      "Expanded SCM prior (causal motifs, graph transformations, new edge functions, multi-objective task selection) and three interleaved mask granularities (cell, column, block)",
+      "Feature-attention scores recover causal skeletons (mean F1 0.7972 on six causal-discovery datasets, best among TFMs and dedicated methods)",
+      "Log-linear Elo-vs-parameters scaling law over six sizes (12.5M-406.2M) with no saturation; guided the scale-up from LimiX-16M"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": 10,
+    "max_classes_note": "Hard limit: the classification head is 10-wide (checkpoint max_num_classes=10) and LimiXPredictor raises ValueError for n_classes > 10 (or < 2). The paper excluded the 12 TALENT datasets with > 10 classes. TabArena's wrapper handles > 10 classes with an ECOC ManyClassClassifier (many_class_threshold=10).",
+    "max_features": null,
+    "max_features_note": "No documented or coded hard limit; feature count is padded to a multiple of 2 and memory-bound (adaptive SVD budget, some ensemble members reduce features via TruncatedSVD to 32/64/128 components, polynomial-interaction members are dropped on CUDA OOM). The earlier LimiX (v1) usage tips recommended < 10,000 features; nothing equivalent is published for LimiX-2. Paper: rank stays low across 10-100+ features and 'generally improves as dimensionality increases' on TALENT.",
+    "max_samples": null,
+    "max_samples_note": "No hard cap: the entire training table is the in-context set in every forward pass (no subsampling/retrieval in v2), so cost grows with training rows. TabArena maintainers needed 8 h (instead of 1 h) budgets on the nine largest/widest datasets (APSFailure took ~3.25 h per split on an RTX PRO 6000 96 GB) and 2 h elsewhere. v1 usage tips recommended < 50,000 samples; LimiX-2 publishes no recommendation. Paper: strongest relative performance around 10^4 samples on BCCO, 'medium-to-large' datasets on TALENT.",
+    "missing_values": "native",
+    "categorical_features": "Handled per ensemble member by the preprocessing pipelines (ordinal / ordinal-shuffled / strict-ordinal-with-feature-shuffle / one-hot / numeric / none encodings; feature_encoder_mode 'train_unknown_nan'); optional categorical_features_indices argument; pandas category/string columns are cast to object and encoded; datetime-like string columns are auto-detected and expanded into numeric date features. Pretraining samples numbers of categorical vs continuous features explicitly.",
+    "text_features": false,
+    "other": "Missing-value imputation as a first-class task (task_type='Feature_imputation', reg_default_noretrieval_MVI_v2.json); naturally missing cells share the mask embedding. Causal skeleton recovery from feature-attention scores (Table 7: F1 0.7143 Sachs, 0.8617 UF, 0.7013 CausalChamber, 0.7829 PATHFINDER, 0.7846 DIABETES, 0.9385 PIGS; mean 0.7972 vs 0.6591 EXAONE Tabular). Conditional likelihoods can score anomalous entries (mentioned, not evaluated). Regression outputs are returned on the original target scale. Predictions are invariant to query-batch composition by design (GPU numerics drift ~2.6e-3 observed in TabArena tests). The v1 'data generation' capability is not advertised for LimiX-2."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Five-stage SCM engine inherited from LimiX v1 and expanded. (1) Hyperparameter sampling: per dataset sample size, numbers of continuous and categorical features, task type and the context/query split position are drawn, with each hyperparameter's sampling distribution itself chosen from a family (normal, uniform, beta). (2) DAG generation: the graph is built hierarchically by recursive expansion of local causal structures specified as causal motifs (chain, confounder, collider) at several granularities, then randomly perturbed by topology-constrained transformations (edge redirection, local path replacement, node-level transformations) that keep acyclicity. (3) SCM propagation: root nodes sampled from randomly chosen distributions; X_i = f_i({g_ij(X_j)}_{j in PA(i)}, eps_i) with edge functions g: MLPs, CNNs and decision trees (from v1) plus new linear mappings, kernel functions, piecewise functions, periodic functions and multiplicative interactions, all composable; parent aggregation f: simple averaging, weighted or neural aggregation; stochastic noise eps_i. (4) Feature/target sampling: only a subset of SCM variables is observed; variable sampling is a multi-attribute selection problem using coarse task descriptors (subgraph structure, feature redundancy) filtered by a multi-objective mechanism for structural and statistical diversity. (5) Task adaptation: stochastic observation transforms (linear scaling, monotonic nonlinear, log, exp, random compositions); classification targets via random discretisation of the continuous target into a varying number of intervals with varying class frequencies/imbalance; regression targets with random scale, skewness and tail adjustments. Episodes split rows into disjoint context and query sets; three masking schemes (individual cells, whole columns across query rows, blocks) are interleaved.",
+    "synthetic_prior_types": [
+      "SCM on hierarchical DAGs built from causal motifs with graph transformations",
+      "MLP edge functions",
+      "CNN edge functions",
+      "decision-tree edge functions",
+      "linear mappings",
+      "kernel functions",
+      "piecewise functions",
+      "periodic functions",
+      "multiplicative interactions",
+      "averaging / weighted / neural parent aggregation"
+    ],
+    "num_synthetic_datasets": null,
+    "num_synthetic_datasets_note": "Not stated. The paper only says 'a large number of datasets' and that the corpus 'can be expanded on demand'; no dataset, episode or token counts, and no row/feature/class sampling ranges are given.",
+    "real_data": "none (pretrained exclusively on synthetic SCM data; TabArena/TALENT/BCCO used only for evaluation)",
+    "objective": "Context-Conditional Masked Modeling (CCMM): for query rows, predict the target from the query's observed features plus the labelled context (cross-entropy for C-way classification; 5000-bin bucketised distributional loss for regression, replacing v1's MSE) and reconstruct masked query features q_theta(x_ij | x_i,-pi_i, X_ct, y_ct) through a shallow-depth reconstruction head; masks at cell, column and block granularity; targets p(x, y | D_context).",
+    "optimizer": "not disclosed",
+    "training_steps": "not disclosed",
+    "batch_size": "not disclosed",
+    "hardware": "not disclosed",
+    "compute": "not disclosed",
+    "training_cost_note": "The technical report gives no optimizer, learning-rate schedule, step count, batch/context sizes, precision, GPU type/count, GPU-hours or cost; the repo has no training code. Only stated: the scaling study trained six sizes (12.5M to 406.2M parameters) under 'a fixed data-generation, optimization, and inference recipe'. LimiX v1's report was similarly silent on hardware (its scaling study spanned 1e11-1.7e12 training tokens).",
+    "curriculum": "not disclosed (no context-length or difficulty curriculum described; v1 mentioned mask ratios sampled in [0.1, 0.4] and solvability-aware task sampling, v2 does not repeat these numbers)"
+  },
+  "icl": {
+    "max_context_rows": null,
+    "context_note": "No fixed context window: the whole training set is passed as context in every forward pass (checkpoint/inference impose no row cap); practical limit is GPU memory and time. Query rows are processed in batches (test_batch_size default 16384 per forward, 'full_first' mode tries the full query set then halves on CUDA OOM). Context rows attend to each other; queries attend only to context.",
+    "large_dataset_strategy": "None built in for v2: no subsampling, no kNN/attention retrieval (v1's two-pass attention-based retrieval was removed; the v2 predictor rejects use_retrieval=true), no bagging over context chunks. Memory management only: query batching with OOM back-off, adaptive per-forward SVD component budget from free CUDA memory, polynomial-interaction members disabled after OOM, optional pipeline-parallel ensemble members across several GPUs (gpu_ids). TabArena therefore ran large datasets with 8 h budgets.",
+    "test_time_ensembling": "Default packaged configs: 32 preprocessing-pipeline members for classification (cls_default_noretrieval_v2.json), 8 for regression and 8 for imputation. Members differ in feature-distribution rebalancing (quantile-normal/uniform on all data or subsets, KDI, robust scaling, Yeo-Johnson power, none), optional TruncatedSVD components (32/64/128) appended to the original features, categorical encoding (ordinal strict/shuffled, one-hot, numeric, none), feature permutation (rotate/shuffle), a fingerprint feature encoder and polynomial-interaction generators (10/50/100 features). Each member is one forward pass over the full context; classification logits are averaged before a softmax with temperature 0.9, bucket-regression members are averaged in log-prob space; mixed precision on GPU; seed 0. TabArena used exactly these packaged configs (32 and 8 members); n_estimators can truncate the list.",
+    "fine_tuning": "Not supported by the released code (inference only) and not discussed in the LimiX-2 report; the TabArena wrapper updates no parameters. (The LimiX v1 report described fine-tuning with retrieval-guided episodes, but no fine-tuning code ships in the current repository.)",
+    "inference_notes": "Entry point inference.predictor.LimiXPredictor (routes v1_0/v2_0 by checkpoint arch_version 2.0) or CLI 'LimiX-infer'; predict(x_train, y_train, x_test, task_type) returns class probabilities (n_query, n_classes), regression values on the original scale, or the imputed matrix. Options: mix_precision (autocast), outlier_remove_std=12, softmax_temperature=0.9, deterministic mode, test_batch_size, preprocess_num_jobs (CPU-parallel preprocessing, default 16), gpu_ids for pipeline parallelism, on-disk preprocessing cache. CUDA strongly recommended; CPU works but is far slower and disables mixed precision."
+  },
+  "speed": {
+    "hardware_note": "The paper reports no timing or hardware. TabArena's official run (2026-09-17): one NVIDIA RTX PRO 6000 (96 GB) per fit on 64 SkyPilot workers, torch 2.13, LimiX commit 774aa3e1, checkpoint revision 20c07a07.",
+    "memory_note": "Checkpoint 1.63 GB (fp32). TabArena's wrapper budgets a 10 GB baseline (network + activations + per-member preprocessing copies) plus 5x the dataframe size. The predictor halves the query batch on CUDA OOM and sizes SVD components from free GPU memory; memory grows with context rows x features because the full training table is attended in every member forward pass.",
+    "speed_claims": "TabArena (full 51-dataset suite, 8x1 protocol): median fit 30.94 s per 1K rows and predict 9.03 s per 1K rows, the slowest of the top group (TabPFN-3.5: 5.7 s / 0.5 s; TabFM+: 20.0 s / 7.5 s; Mitra-v2: 57.1 s / 0.8 s); maintainers describe it as 'the accurate-and-slow end of the Pareto front'. Nine large/wide datasets needed an 8 h time limit and every other dataset 2 h instead of the 1 h default (recorded protocol deviation); APSFailure splits took ~3.25 h each. The paper makes no speed claims.",
+    "inference_cost_note": "No API or pricing; self-hosted GPU inference only, and the weights license prohibits hosted/API or any commercial deployment."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": true,
+      "source": "LimiX-2 technical report (arXiv 2609.17488), Section 5.3, Table 5, Figures 6-8; reproduced on the Hugging Face model card",
+      "protocol_note": "288 of the 300 TALENT datasets (120 binary, 68 multiclass after excluding the 12 classification datasets with > 10 classes, 100 regression); official TALENT pipeline, fixed 64/16/20 train/val/test split, 15 random seeds; accuracy (classification) and RMSE (regression); per-dataset pairwise comparisons fitted with a Bradley-Terry Elo (Random Forest anchored at 1000), 95% CI from 2000 bootstrap rounds; baselines at library defaults, TFMs run per their official inference procedures without tuning. Baselines: XGBoost, LightGBM, CatBoost, RF, AutoGluon 1.6 (EX, 4h), FT-Transformer, RealMLP, TabR, TabM, ModernNCA, Mitra-v2, TabFM, TabPFN-3, TabICLv2, TabDPT, EXAONE Tabular, Xiaomi-TabLDM, LimiX-16M.",
+      "avg_rank": null,
+      "elo": 1506,
+      "win_rate_vs": "57% vs TabFM, 62% vs AutoGluon 1.6 (EX, 4h), 75% vs EXAONE Tabular, 74-85% vs the other tabular foundation models, 89-96% vs the remaining baselines (96% vs TabM); > 50% against every method",
+      "other": "Overall Elo 1506 (-32,+37) vs TabFM 1471 (-28,+30), AutoGluon 1.6 1438, EXAONE Tabular 1393, TabPFN-3 1363, LimiX-16M 1227, CatBoost 1094, RF 1000. Classification Elo 1475 (-35,+38), regression 1584 (-71,+92) (AutoGluon 1.6 EX 4h 1581), binary 1455 (-43,+51), multiclass 1520 (-51,+63). Improvability 6.75% (TabFM 9.17%); aggregated wins 84.3 (TabFM 50.1). No overall average rank is reported; per-task mean ranks (best in each): 4.62 binary, 3.91 multiclass, 3.88 regression."
+    },
+    "other": [
+      {
+        "name": "TabArena (paper, full 51 datasets, default config; leaderboard baselines accessed 2026-09-15)",
+        "value": "Elo 1935 (-77,+111), #1 on all four metrics: improvability 3.3%, avg rank 5.5, aggregated wins 18.9; runner-up TabFM+ 1818 (117.4 Elo behind before rounding), Causilo 1790, AutoGluon 1.6 (NC, 4h) 1789, TabFM 1774, Mitra-v2 1769, EXAONE Tabular 1749, TabPFN-3 1632, LimiX-16M 1345. Pairwise win rates: 65.2% vs TabFM+, 67.7% vs TabFM, 78.3% vs AutoGluon 1.6 (NC, 4h), 79.0% vs EXAONE Tabular, 79.3% vs Causilo, 81.3% vs Mitra-v2, > 90% vs other TFMs, >= 95% vs tuned+ensembled tree/NN baselines",
+        "source": "https://arxiv.org/abs/2609.17488 (Table 2, Fig. 4-5)"
+      },
+      {
+        "name": "TabArena classification subset (38 datasets) / regression subset (13 datasets), paper",
+        "value": "Classification Elo 1917 (-77,+127), improvability 4.3%, avg rank 6.0, wins 10.6, win rate 94.5%; Regression Elo 2206 (-188,+318), improvability 0.6%, avg rank 3.8, wins 8.3, win rate 96.9% (runner-up TabFM+ 2063, AutoGluon 1.6 NC 4h 2060)",
+        "source": "https://arxiv.org/abs/2609.17488 (Tables 3-4)"
+      },
+      {
+        "name": "TabArena official maintainer run (TabArena-v0.1, 816 splits, 8x1 protocol, 96 entrants, 2026-09-17)",
+        "value": "#1: Elo 1943 (+118/-80), normalized score 0.922, improvability 3.4%; #1 in binary 1912 (+142/-88), multiclass 1988 (+396/-195), regression 2200 (+341/-175); vs TabPFN-3.5 1861, TabFM+ 1821, Causilo 1785, AutoGluon 1.6 (NC, 4h) 1784, Mitra-v2 1762; LimiX v1 #35 at 1344. Median fit 30.9 s / predict 9.0 s per 1K rows. Protocol deviation: 2 h (8 h on nine datasets) time limits",
+        "source": "https://github.com/autogluon/tabarena/pull/575 (BENCHMARK_LOG.md entry limix2_17092026)"
+      },
+      {
+        "name": "TabArena-Lite (self-reported by the LimiX team in the PR, default, no HPO)",
+        "value": "Elo 1912.8, improvability 0.0318",
+        "source": "https://github.com/autogluon/tabarena/pull/575"
+      },
+      {
+        "name": "BCCO (156 datasets: 71 binary, 35 multiclass, 50 regression; 15 seeds; 20% of train held out for validation)",
+        "value": "Overall Elo 1432 (-38,+45), #1; classification 1321 (-35,+42), regression 1859 (-112,+158), binary 1284 (-44,+51), multiclass 1414 (-67,+87; AutoGluon 1.6 best at 1443); improvability 6.97% (TabFM 12.24%); aggregated wins 50.4 (TabFM 16.7); mean ranks 5.45 binary, 5.17 multiclass, 3.10 regression (all best); win rates 65% vs TabFM, 67% vs EXAONE Tabular, 73-79% vs other TFMs (79% vs LimiX-16M), 81-94% vs tree/NN baselines. Baselines: AutoGluon 1.6 (EX, 4h) 1376, TabFM 1369, EXAONE Tabular 1345, TabPFN-3 1295, LimiX-16M 1230, CatBoost 1140, RF 1000",
+        "source": "https://arxiv.org/abs/2609.17488 (Table 6, Fig. 9-11)"
+      },
+      {
+        "name": "Causal skeleton recovery (Sachs, UF, CausalChamber, PATHFINDER, DIABETES, PIGS)",
+        "value": "Mean F1 0.7972 (best F1 on all six, lowest SHD on five); per dataset F1/SHD: Sachs 0.7143/8, UF 0.8617/26, CausalChamber 0.7013/23, PATHFINDER 0.7829/76, DIABETES 0.7846/263, PIGS 0.9385/77; EXAONE Tabular second at F1 0.6591; TabFM, TabICLv2, TabPFN-3, Xiaomi-TabLDM, XGBoost gain importance and PC/GES/LiNGAM/NOTEARS-MLP/DAG-GNN/AVICI/TabCausal all lower",
+        "source": "https://arxiv.org/abs/2609.17488 (Table 7)"
+      },
+      {
+        "name": "Parameter scaling law (six sizes 12.5M-406.2M, log-linear Elo fit)",
+        "value": "TabArena: alpha(Elo@100M)=1863.88, beta=34.68 Elo/doubling, R2 0.9808 (Elo 1766 at 12.5M -> 1935 at 406.2M); TALENT cls 1427.25/22.16/0.9792; TALENT reg 1545.12/18.26/0.9680; BCCO cls 1295.86/11.24/0.9617; BCCO reg 1795.89/30.06/0.9702; no saturation observed, extrapolated to 2B",
+        "source": "https://arxiv.org/abs/2609.17488 (Table 8, Fig. 12-14)"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "Predecessor: LimiX v1 (LimiX-16M, 16.52M params, arXiv 2509.03505, released 29 Aug 2025; Apache 2.0). Changes in LimiX-2: (1) Scale: ~25x more parameters (16.5M -> 406.2M), embedding 192 -> 256, 12 blocks (v1: two feature-axis passes + one sample-axis pass per block, shared FFN, pre-LN LayerNorm) -> 24 dual-axis blocks with pre-norm RMSNorm; capacity added mainly to the task pathway. (2) Decoupled pathways: v1 routed features and target through the same attention/FFN; v2 uses separate sample-axis attention and separate SwiGLU FFNs for feature and task streams, asymmetric feature-axis attention with unshared Q/K/V, and K=4 task-embedding slots plus a task-type embedding instead of one task embedding. (3) Attention: all K/V heads in cross attention (v1: one K/V head), QK-norm and learnable length-dependent query scaling for length stability. (4) Heads: 5000-bin distributional regression instead of MSE; heads attached at different depths (masked-feature reconstruction at a shallow layer, classification/regression at the top) with bottleneck post-adapters. (5) Prior: same five-stage SCM pipeline but with hierarchical causal-motif DAGs and topology-constrained graph transformations, new edge functions (linear, kernel, piecewise, periodic, multiplicative; composable), several parent-aggregation strategies, multi-objective feature/target selection and richer observation transforms; three interleaved mask granularities retained. (6) Inference: v1's attention-guided two-pass retrieval ensemble (4 pipelines for classification, 8 for regression, retrieval of context samples/features from attention scores) is removed; v2 uses larger no-retrieval preprocessing ensembles (32 / 8 members) over the full context, and regression returns the original scale. (7) Scope: v2 advertises classification, regression, imputation and causal-skeleton recovery; v1 additionally advertised data generation and fine-tuning. (8) License: v1 weights Apache 2.0 -> v2 weights non-commercial; code Apache-derived with attribution clause. (9) Results: TabArena Elo 1345 -> 1935 (paper; 1344 -> 1943 in TabArena's own runs), TALENT 1227 -> 1506, BCCO 1230 -> 1432. Sibling LimiX-2M (Wang et al., arXiv 2606.04485, ICML 2026; 1.92M params, d=96, 6 heads, 12 blocks; released 10 Nov 2025) is a separate lightweight v1-family model whose contributions are the RaBEL radial-basis numeric embedding and the reordered sample-attention -> FFN -> feature-attention block; LimiX-2 adopts that block order but not RaBEL (it keeps a linear/MLP numeric encoder). '2M' denotes 2 million parameters, not version 2.",
+  "sources": [
+    {
+      "title": "LimiX-2: A Contextual Mechanism Network Towards General Structured-Data Intelligence (arXiv 2609.17488, abstract page; submitted 15 Sep 2026)",
+      "url": "https://arxiv.org/abs/2609.17488"
+    },
+    {
+      "title": "LimiX-2 technical report, arXiv HTML full text (architecture, CCMM, data generation, evaluation, scaling law)",
+      "url": "https://arxiv.org/html/2609.17488"
+    },
+    {
+      "title": "LimiX GitHub repository README (limix-ldm-ai/LimiX)",
+      "url": "https://github.com/limix-ldm-ai/LimiX"
+    },
+    {
+      "title": "LimiX code license: Stable AI Technology Co., Ltd. License v1.0 (LICENSE.txt)",
+      "url": "https://github.com/limix-ldm-ai/LimiX/blob/main/LICENSE.txt"
+    },
+    {
+      "title": "LimiX v2 default inference configs (32 classification / 8 regression / 8 imputation members)",
+      "url": "https://github.com/limix-ldm-ai/LimiX/tree/main/config"
+    },
+    {
+      "title": "LimiX v2 predictor source (class limit, query batching, OOM fallback, retrieval removed)",
+      "url": "https://github.com/limix-ldm-ai/LimiX/blob/main/inference/v2_0/predictor.py"
+    },
+    {
+      "title": "LimiX v2 model loader (checkpoint config: nlayers, nhead, embed_dim)",
+      "url": "https://github.com/limix-ldm-ai/LimiX/blob/main/model/v2_0/loading.py"
+    },
+    {
+      "title": "LimiX pyproject.toml (package 'LimiX' 2.0.0, inference only)",
+      "url": "https://github.com/limix-ldm-ai/LimiX/blob/main/pyproject.toml"
+    },
+    {
+      "title": "Hugging Face model card stable-ai/LimiX-2 (license metadata, model table, benchmarks, usage)",
+      "url": "https://huggingface.co/stable-ai/LimiX-2"
+    },
+    {
+      "title": "StableAI LimiX Non-Commercial License v1.0 (weights)",
+      "url": "https://huggingface.co/stable-ai/LimiX-2/blob/main/LICENSE"
+    },
+    {
+      "title": "LimiX-2.ckpt checkpoint (embedded config: nlayers=24, nhead=8, embed_dim=256, hid_dim=1024, num_cls_tokens=4, num_buckets=5000, max_num_classes=10; 406,232,101 parameters)",
+      "url": "https://huggingface.co/stable-ai/LimiX-2/blob/main/LimiX-2.ckpt"
+    },
+    {
+      "title": "Hugging Face model card stable-ai/LimiX-2M (sibling; Stable AI license, usage tips with v1 size recommendations)",
+      "url": "https://huggingface.co/stable-ai/LimiX-2M"
+    },
+    {
+      "title": "LimiX v1 usage tips (recommended < 50,000 samples and < 10,000 features for v1 models)",
+      "url": "https://huggingface.co/stable-ai/LimiX-2M/blob/main/doc/Usage_tips.md"
+    },
+    {
+      "title": "LimiX: Unleashing Structured-Data Modeling Capability for Generalist Intelligence (LimiX v1, arXiv 2509.03505)",
+      "url": "https://arxiv.org/abs/2509.03505"
+    },
+    {
+      "title": "LimiX v1 technical report, arXiv HTML full text (architecture, retrieval ensemble, fine-tuning, Apache 2.0)",
+      "url": "https://arxiv.org/html/2509.03505"
+    },
+    {
+      "title": "LimiX-2M: Mitigating Low-Rank Collapse and Attention Bottlenecks in Tabular Foundation Models (arXiv 2606.04485, ICML 2026)",
+      "url": "https://arxiv.org/abs/2606.04485"
+    },
+    {
+      "title": "TabArena PR #575: [New Model] Add LimiX-2 foundation model (wrapper, licenses, official run results and timings)",
+      "url": "https://github.com/autogluon/tabarena/pull/575"
+    },
+    {
+      "title": "TabArena LimiX-2 wrapper info.py (license metadata, run suite tabarena-2026-09-17)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/limix_2/info.py"
+    },
+    {
+      "title": "TabArena LimiX-2 wrapper model.py (ensemble sizes, 10-class head + ECOC, memory estimate)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabarena/src/tabarena/models/limix_2/model.py"
+    },
+    {
+      "title": "TabArena BENCHMARK_LOG.md entry limix2_17092026 (hardware, time limits, Elo 1943, timings)",
+      "url": "https://github.com/autogluon/tabarena/blob/main/packages/tabflow_slurm/BENCHMARK_LOG.md"
+    },
+    {
+      "title": "TabArena PR #574: Add LimiX-2 Model (earlier duplicate submission, closed)",
+      "url": "https://github.com/autogluon/tabarena/pull/574"
+    },
+    {
+      "title": "Pandaily: Stable AI and Tsinghua Release LimiX-2 Structured-Data Foundation Model",
+      "url": "https://pandaily.com/stable-ai-limix-2-structured-data-foundation-model"
+    },
+    {
+      "title": "LimiX official documentation site (mirror of the README)",
+      "url": "https://www.limix.ai/doc/"
+    }
+  ],
+  "notes": "Release date: weights/code published 16 Sep 2026 (README news); arXiv v1 submitted 15 Sep 2026; HF repo created 15 Sep 2026. Author list: 'LimiX Team' (Stable AI & Tsinghua University), project design/lead Xingxuan Zhang and Peng Cui, ~58 named contributors. Numbers the paper does NOT give (all set to null / 'not disclosed'): training optimizer, steps, batch/context sizes, hardware, compute or cost; number of synthetic datasets; explicit feature/sample limits; inference timings; attention-head count and FFN width. Heads (8), FFN hidden dim (1024), K=4 slots, 5000 buckets, 10-class head and the exact parameter count (406,232,101) were read from the config and tensor shapes embedded in the released LimiX-2.ckpt (sources[10]) and agree with the paper's 24 layers, d=256, K=4, B=5000 and 406.2M. Elo values differ between the paper (1935, computed against leaderboard scores accessed 2026-09-15) and TabArena's own maintainer run (1943, 96 entrants, longer time limits); the site's tabarena.json should be treated as authoritative for the leaderboard number. The paper's TabArena table lists 'TabPFN-3' (1632) whereas TabArena's run compares against TabPFN-3.5 (1861). LimiX-2M (2 million params) is a different, older model than LimiX-2. The GitHub code license's Section 10 says weights distributed under it are part of the Work, but the LimiX-2 weights are distributed under the separate non-commercial license, so commercial use of LimiX-2 requires a commercial agreement regardless of the code license. Pandaily's article only restates the paper/HF facts (400M, Elo 1935/1432/1506, Peng Cui's Tsinghua group) and adds no training or licensing details."
+}

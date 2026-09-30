@@ -1,0 +1,180 @@
+{
+  "id": "tabiclv2",
+  "name": "TabICLv2",
+  "tabarena_entry": "TabICLv2 (default)",
+  "family": "TabICL",
+  "developer": "Inria Soda (Jingang Qu, David Holzmüller, Gaël Varoquaux, Marine Le Morvan)",
+  "organization_type": "academic",
+  "release_date": "2026-02-11",
+  "paper_title": "TabICLv2: A Better, Faster, Scalable, and Open Tabular Foundation Model",
+  "links": {
+    "paper": "https://arxiv.org/abs/2602.11139",
+    "code": "https://github.com/soda-inria/tabicl",
+    "weights": "https://huggingface.co/jingang/TabICL",
+    "docs": "https://tabicl.readthedocs.io/en/latest/",
+    "pypi": "https://pypi.org/project/tabicl/",
+    "tabarena_pr": "https://github.com/autogluon/tabarena/pull/259"
+  },
+  "availability": {
+    "open_weights": true,
+    "local_inference": true,
+    "hosted_api": false,
+    "training_code_released": true,
+    "prior_code_released": true,
+    "notes": "Everything is in one BSD-licensed repo: scikit-learn-style inference (TabICLClassifier/TabICLRegressor, pip install tabicl, Python >=3.10), the synthetic prior (tabicl.prior, 'graph_scm'), and the full three-stage pre-training recipe (python -m tabicl.train + scripts/train_v2_{clf,reg}_stage{1,2,3}.sh, released in tabicl 2.2.0 on 2026-09-02; the maintainers note it was migrated from a private codebase and reproduces the paper recipe). Checkpoints auto-download from Hugging Face repo jingang/TabICL: tabicl-classifier-v2-20260212.ckpt (110.4 MB) and tabicl-regressor-v2-20260212.ckpt (114.3 MB); older v1/v1.1 classifier checkpoints are in the same repo. A <170-line educational reimplementation of the architecture plus a simplified prior is at github.com/soda-inria/nanotabicl. Paper published at ICML 2026 (arXiv v1 2026-02-11, v2 2026-09-16). No hosted API."
+  },
+  "license": {
+    "code": "BSD-3-Clause (repo LICENSE, 'Copyright (c) 2025, Soda team @ Inria'); the src/tabicl/forecast subdirectory is Apache-2.0 because it is derived from TabPFN-TS",
+    "weights": "BSD-3-Clause (Hugging Face model-card metadata 'license: bsd-3-clause' on jingang/TabICL; no separate weights license text)",
+    "prior_or_data": "BSD-3-Clause (the synthetic-data generator ships inside the code repo; no dataset artifact is distributed, datasets are generated on the fly)",
+    "commercial_use": "yes",
+    "non_commercial_use": "yes",
+    "notes": "Permissive for code, prior and checkpoints alike: BSD-3-Clause allows commercial use, modification and redistribution with attribution/notice retention and no endorsement clause; no research-only restriction, no share-alike, no API terms. GitHub's license detector shows 'Other' only because the LICENSE file concatenates the BSD-3 text with the Apache-2.0 text for the forecast module. The README asks for citation of both TabICL papers for research use (a request, not a license condition)."
+  },
+  "architecture": {
+    "type": "column-then-row embedding + dataset-wise ICL transformer (TabICL lineage; runtime O(n^2 + n m^2))",
+    "parameters_m": 28,
+    "parameters_note": "Paper Section 3: improvements were added 'without increasing model size ... placing it around 28M parameters'. Classification and regression are separate checkpoints with the same configuration (differences: class lookup vs. linear target embeddings, 10-way vs. 999-quantile head, LayerNorm with vs. without bias); no exact per-checkpoint count is published (files are 110.4 MB clf / 114.3 MB reg).",
+    "layers": "3 column-wise induced self-attention blocks (TF_col, 128 inducing vectors) + 3 row-wise transformer layers (TF_row) + 12 ICL transformer layers (TF_icl); 2-layer MLP prediction head (hidden 1024)",
+    "embedding_dim": "128 in TF_col and TF_row; 512 in TF_icl (row embedding = 4 [CLS] tokens x 128 concatenated); FFN expansion 2x, GELU, pre-norm LayerNorm",
+    "attention_heads": 8,
+    "attention_scheme": "Per-column set-transformer attention (ISAB with 128 inducing vectors, O(n k) per column); full self-attention across the features of each row with RoPE (base 100000, non-interleaved) and 4 learnable [CLS] tokens whose outputs form the row embedding; then in-context attention over rows where test rows attend only to training rows. Query-Aware Scalable Softmax (QASSMax) - queries rescaled elementwise by MLP_base(log n) times (1 + tanh(MLP_gate(q))), two 2-layer MLPs with 64 hidden units - is applied in the inducing-point stage of TF_col and in all TF_icl layers to counter attention fading and generalize to contexts far longer than seen in pre-training; it stays compatible with FlashAttention-2/3. At inference, Q/K/V projections are computed selectively (only [CLS] queries in the last TF_row block; keys/values only for training rows in TF_icl).",
+    "checkpoints": "separate classification & regression",
+    "regression_head": "distributional: 999 quantiles at levels 0.001 ... 0.999 trained with pinball loss summed over quantiles; point prediction = mean of predicted quantiles; full predictive distribution (PDF, CDF, CRPS, moments) built by sorting (default) or isotonic regression of the quantiles plus parametric exponential tails",
+    "feature_embedding": "Repeated feature grouping: for a table with m columns, m groups are formed by circular shifts, group j = columns (j, j+1, j+3) mod m, each mapped by a shared Linear(3 -> 128) so every column keeps its own token while feature symmetries are broken (no pair of columns shares two groups when m >= 7). Target-aware embedding then adds a label embedding (learnable lookup for <= 10 classes, linear layer for regression targets) to every training-row cell before the column transformer, so TF_col already acts as an in-context learner within each column. Column outputs are used directly as feature embeddings (no extra transformation as in v1). Features are standardized/normalized, outlier-clipped (z-score 4) and shuffled per ensemble member by the preprocessing pipeline.",
+    "key_innovations": [
+      "Query-Aware Scalable Softmax (QASSMax): learnable, query-dependent log(n) temperature scaling in TF_col (inducing stage) and TF_icl; keeps 100% accuracy and low attention entropy in a needle-in-haystack test with 15K distractors where plain softmax collapses; enables million-row contexts without long-sequence pre-training",
+      "Repeated feature grouping (circular (0,1,3) shifts) instead of independent per-feature embedding, avoiding representation collapse without reducing the number of feature tokens",
+      "Target-aware embedding: labels injected before column-wise compression rather than only in the ICL stage",
+      "Native quantile regression head (999 quantiles, pinball loss) with a closed-form QuantileDistribution for probabilistic outputs - first TabICL with regression",
+      "Mixed-radix ensembling for >10 classes (label decomposed into <=10-ary digits, TF_col run per digit and averaged) combined with hierarchical classification in TF_icl - arbitrary class counts without retraining",
+      "New synthetic prior ('graph_scm'): Cauchy random DAGs, 8 random function families, random converters, correlated hyperparameter sampling, ExtraTrees-based dataset filtering",
+      "Muon optimizer (spectral-norm steepest descent via Newton-Schulz) with higher LR, batch 64 and a 550K-step three-stage curriculum; ~24.5 H100 GPU-days per model",
+      "Inference engine: selective Q/K/V projections, memory-model-driven auto batching, CPU and memory-mapped disk offloading (1M x 500 table under 50 GB GPU / 24 GB RAM), KV cache for repeated prediction, FlashAttention-3",
+      "8 attention heads in TF_col/TF_icl (v1 used 4 in TF_icl), bias-free LayerNorm for the regressor, non-interleaved RoPE, standard (non-zero) residual initialization"
+    ]
+  },
+  "capabilities": {
+    "classification": true,
+    "regression": true,
+    "max_classes": null,
+    "max_classes_note": "No hard limit. Pre-trained with 2-10 classes (label embedding tables have 10 entries); more classes are handled natively when support_many_classes=True (default) via mixed-radix ensembling in TF_col plus hierarchical classification in TF_icl. On the 12 TALENT datasets with >10 classes both this native path and the TabPFNv2 ECOC wrapper beat all baselines (ECOC slightly better but 3x slower).",
+    "max_features": null,
+    "max_features_note": "No hard limit. Pre-trained on 2-100 columns (paper: up to 100 features in all stages; README: 'can degrade when going much beyond 100 features'). README reports excellent benchmark results up to 2,000 features and the paper processes a 1M x 500 table; the docs say the exact upper limit is unknown. Row-wise attention cost grows as O(n m^2).",
+    "max_samples": null,
+    "max_samples_note": "No hard limit. Pre-trained on datasets of 400-60,000 rows (300-48K training rows per README). Paper: top TALENT rankings from 10^3 to 10^5 samples, still strong at ~600K samples (TALENT extension, where TabPFN-2.5 ran out of memory), and 1M samples x 500 features processed in 450 s under 50 GB GPU / 24 GB CPU memory with disk offloading ('million-scale datasets under 50 GB GPU memory'). README: accuracy 'may degrade at some point' beyond ~500K; the paper lists multi-million-row data as still challenging. Below 300 samples untested in pre-training, but a 16-shot benchmark still ranks 2nd behind RealTabPFN-2.5.",
+    "missing_values": "preprocessing",
+    "categorical_features": "auto-detected from pandas dtypes (string/object/category/bool; integer columns are treated as numerical, all columns of a numpy array share its dtype) and ordinal-encoded, with a separate category for missing values; category names carry no semantic information; skrub TableVectorizer recommended for messy/heterogeneous data",
+    "text_features": false,
+    "other": "Missing numerical values are mean-imputed (paper lists better missing-value handling as future work). Probabilistic outputs: predict_proba for classification (softmax temperature 0.9, logit averaging); predict(X, output_type='quantiles', alphas=...) plus a QuantileDistribution with PDF/CDF/CRPS/mean/variance for regression. KV cache for fast repeated inference; fitted estimators can be saved with or without training data. Extras: SHAP/ShapIQ explainability with NaN-based feature masking, zero-shot time-series forecasting (TabICLForecaster, TabPFN-TS-style), some unsupervised tasks (since 2.1.0), single-dataset fine-tuning (since 2.1.1). No text/semantic column-name use, no multi-output regression, no native distribution-shift handling."
+  },
+  "pretraining": {
+    "data_type": "synthetic only",
+    "synthetic_prior_summary": "Structural-causal-model prior rebuilt from scratch ('graph_scm'), developed by design principles (maximize dataset diversity, keep useful inductive biases, stay cheap) rather than validation feedback. Per dataset: sample global properties (2-100 columns, categorical ratio Uniform(-0.5,1.2) clipped to [0,1], categorical cardinalities LogInt(2,M) with M<=9 sampled via a correlated-scalar mechanism, 2-10 classes, 400-60K rows); sample a DAG with LogInt(2,32) nodes where edge i->j exists with probability sigmoid(A + B_i + C_j) with independent standard-Cauchy A, B_i, C_j ('random Cauchy graph', giving heavy-tailed global/local connectivity beyond the tree-shaped graphs of TabPFNv2); root nodes get random points (normal, uniform, unit-ball or random-covariance points passed through a random function); each child node applies a random multi-function of its parents (concatenate parents then one function, or per-parent functions aggregated by sum/product/max/logsumexp) drawn from 8 families - MLP (1-3 random layers, width up to 127, random activations), symmetric CatBoost-style tree ensembles (1-128 oblivious trees, depth 1-7, std-proportional split dimensions), nearest-center discretization, multivariate Gaussian processes built in the Fourier domain with random power-law spectral tails controlling path smoothness (proved in Appendix G; 50% axis-aligned product kernels), linear, quadratic, EM-style cluster-assignment (plateaus) and products of functions; five random matrix types (Gaussian, correlated-weights, singular-value, Laplace-kernel, activation-transformed), random weight vectors (feature importances, singular-value decays) and ~27 fixed plus parametric activations. Node data are standardized, column-weighted, L2-normalized, rescaled by a random node importance; columns are extracted by random converters (numerical: identity or Kumaraswamy warping; categorical: 7 neighbor- or softmax-based variants) so unobserved node dimensions act as noise (no per-edge Gaussian noise, unlike TabPFNv2 - adding it changed nothing). Post-processing as in TabICL (drop constant columns, outlier removal, standardization, permute columns and class ids). Filtering rejects graphs where x-nodes share no ancestor with the y-node and datasets on which an ExtraTrees regressor (25 trees, depth 6, out-of-bag bootstrap test at 95%) cannot beat a constant predictor - about 35% of classification and 25% of regression candidates in stage 1. Pre-training the v2 architecture on the old TabICL prior fails (validation loss degrades), so the prior is the single largest contributor in the ablation.",
+    "synthetic_prior_types": [
+      "SCM / random Cauchy DAG",
+      "MLP (random neural net)",
+      "tree ensemble (symmetric, CatBoost-style)",
+      "nearest-center discretization",
+      "GP (multivariate, random Fourier features, random smoothness)",
+      "linear",
+      "quadratic",
+      "EM cluster-assignment (plateaus)",
+      "product of random functions"
+    ],
+    "num_synthetic_datasets": 35000000,
+    "num_synthetic_datasets_note": "Paper Section 4.1: about 35M datasets (550K steps x batch 64), fewer than TabICL v1 (about 83M) and TabPFNv2 (about 130M); generated on the fly in DataLoader workers, so no fixed corpus exists.",
+    "real_data": "none in pre-training; the 60 TabPFNv2 development datasets served only for validation/ablation, and TALENT development datasets were excluded from reported results",
+    "objective": "PFN objective: negative log-likelihood of held-out test targets given the training context - cross-entropy over up to 10 classes for the classifier; pinball (quantile) loss summed over 999 quantile levels for the regressor",
+    "optimizer": "Muon (implementation of Schaipp 2025; Moonlight-style per-parameter LR scaling 0.2*sqrt(max(n,m)); momentum beta1 0.9) replacing v1's Adam/AdamW; weight decay 0.01 (the paper says cautious weight decay, but the recipe scripts note it was not wired into Muon for the released checkpoints, so plain WD 0.01 was effectively used); gradient clipping 10 in stages 1-2 and 1 in stage 3; cosine schedule with 1% warmup and floor 1e-7 in every stage; different train/test sizes sampled per micro-batch",
+    "training_steps": "550K total: stage 1 = 500K steps on 1,024-row datasets (30-90% train, max LR 8e-4); stage 2 = 40K steps on 400-10,240 rows (log-uniform, ~80% train, max LR 1e-4); stage 3 = 10K steps on 400-60,000 rows (log-uniform, ~80% train, max LR 2e-5). Ablations in the paper use 280K stage-1 steps; the model matches RealTabPFN-2.5 log-loss after about 200K steps.",
+    "batch_size": "64 datasets per optimizer step (micro-batch 4 in stage 1, 1 in stages 2-3 with gradient accumulation), each dataset with 1-100 features and 2-10 classes",
+    "hardware": "4 GPUs per run - H100 80 GB per the paper (the released stage-3 script notes the reference run was on H200s and needed no gradient checkpointing); FlashAttention-3 in stages 2-3 (1.3x over FA-2), automatic mixed precision, gradient checkpointing for datasets above 20K rows in stage 3",
+    "compute": "about 24.5 H100 GPU-days per model (stage 1 ~20, stage 2 ~2.5, stage 3 ~2 GPU-days), i.e. ~49 GPU-days for the classifier and regressor together",
+    "training_cost_note": "Paper: cheaper than TabICL v1 (60 A100-days; one H100-hour ~ 2 A100-hours). README: with the released code, stage 1 runs at ~0.7-0.8 s/step in float16 or ~1 s/step in float32 on 4x H100 (so ~5-6 days wall-clock for 500K steps). No monetary cost is stated. Compute came from GENCI-IDRIS, DFG-funded resources and the LimiX team.",
+    "curriculum": "Three-stage sample-size curriculum inherited from TabICL (fixed 1,024 rows -> up to 10,240 -> up to 60,000 rows) with decreasing peak LR; each stage restarts from the previous stage's weights. Stage-wise TALENT average rank improves 9.94 -> 5.69 -> 5.41 overall and 14.91 -> 5.50 -> 4.71 on datasets with >10K rows."
+  },
+  "icl": {
+    "max_context_rows": null,
+    "context_note": "No fixed context window: the entire training set is the context and test rows attend to all training rows in one forward pass. Longest pre-training context is 60K rows (48K training rows); QASSMax's log(n) temperature scaling is what lets attention stay sharp far beyond that (validated up to 1M rows).",
+    "large_dataset_strategy": "Native full-context ICL - no subsampling, retrieval, bagging or distillation. Memory is kept in check by (a) a polynomial peak-memory model that sets the batch size per transformer, (b) hierarchical offloading of the n x m x 128 column-embedding tensor to CPU RAM or a memory-mapped disk file with asynchronous pinned-memory transfers (offload_mode='auto' picks GPU/CPU/disk), and (c) selective Q/K/V projections. Example: 1M rows x 500 features = ~250 GB embeddings -> 115 s with CPU offloading (250 GB RAM) or 450 s with disk offloading (<24 GB RAM, <50 GB GPU) on an H100. The TabPFNv2 random-forest partitioning extension hurts TabICLv2 (Appendix L.5), unlike v1.",
+    "test_time_ensembling": "n_estimators=8 by default (paper and TabArena runs; 32 on TALENT for parity with TabPFN-2.5; v1 originally used 32). Members differ by feature permutation (latin-square shuffles), class-label shifts and normalization/preprocessing variants; logits are averaged (average_logits=True) with softmax temperature 0.9. Paper Table L.1: relative to 1 estimator, 8 estimators give +0.20% accuracy / +1.22% RMSE gain at 0.9 s vs 0.2 s per TALENT dataset; 32 give +0.26% / +1.46% at 2.6 s.",
+    "fine_tuning": "Not used in the paper (zero-shot only, no HPO). Supported in the library since tabicl 2.1.1 (2026-04-29): FinetunedTabICLClassifier / FinetunedTabICLRegressor run a full PyTorch loop (AdamW lr 1e-5, cosine warmup, gradient clipping, AMP, early stopping on a validation split, optional freezing of col/row/icl modules, DDP under torchrun) and write checkpoints in the pre-training schema that load back into the zero-shot estimators.",
+    "inference_notes": "fit() only preprocesses (and optionally builds a KV cache of training-row projections); predict() runs the forward pass. Device auto-selection CUDA -> XPU -> MPS -> CPU; AMP and FlashAttention-3 (Hopper) automatic; batch_size=8 ensemble members per pass; kv_cache=True speeds repeated prediction on the same training data and lets models be saved without raw training data."
+  },
+  "speed": {
+    "hardware_note": "All paper timings for TabICLv2 are on a single H100 80 GB GPU (FlashAttention-3 + AMP); Figure 6 additionally compares TabICLv2 and TabPFN-2.5 across several hardware types including CPU; competitor runtimes on TabArena/TALENT come from those benchmarks' own hardware.",
+    "memory_note": "Peak GPU memory is predicted per stage by a fitted polynomial (e.g. MEM_icl ~ 0.0195 MB x batch x seq_len + 143 MB) and the batch size is adjusted automatically; the column-embedding tensor can be offloaded to CPU or disk. 1M rows x 500 features: <50 GB GPU and <24 GB CPU RAM (250 GB disk) with disk offloading, or 50 GB GPU + 250 GB RAM with CPU offloading. Blog (Varoquaux): mid-sized and larger tables still need large GPUs.",
+    "speed_claims": "Complexity O(n^2 + n m^2). 50K samples x 100 features fit+predict in under 10 s on an H100, 10.6x faster than TabPFN-2.5 (8 estimators each); 11.8x faster than TabPFN-2.5 on CPU at 10K samples; 1M x 500 in 115 s (CPU offload) / 450 s (disk offload); mean TALENT inference time per dataset 0.2 s (1 estimator), 0.9 s (8), 2.6 s (32). Dominates the improvability-vs-time and Elo-vs-time Pareto fronts among TFMs on TabArena and TALENT; native many-class handling is 3x faster than the ECOC wrapper. Runtime comparable to TabICL v1 (README).",
+    "inference_cost_note": "Free local inference under BSD-3-Clause; no API or per-call pricing. Probabl blog: on TabArena, state-of-the-art TFMs cost about 3x XGBoost and 20x random forests in train time, while cutting the error gap to the best method 3x (vs XGBoost) to 5x (vs random forest)."
+  },
+  "benchmarks": {
+    "talent": {
+      "reported": true,
+      "source": "TabICLv2 paper (arXiv 2602.11139v2, ICML 2026), Section 6 and Appendix K/L",
+      "protocol_note": "TALENT: 300 datasets (120 binary, 80 multiclass, 100 regression) with 64/16/20 train/val/test splits; accuracy for classification and RMSE for regression as primary metrics (AUC, log-loss, MAE, R2 supplementary); baselines tuned on validation; TabICLv2 untuned with 32 estimators (same for TabPFN-2.5/RealTabPFN-2.5); datasets used for TabICLv2 development excluded",
+      "avg_rank": 4.66,
+      "elo": null,
+      "win_rate_vs": "62% vs RealTabPFN-2.5 and 65% vs TabPFN-2.5 (accuracy/RMSE); binomial test p = 0.0018 / 4.4e-05 (accuracy), 6.4e-09 / 2.5e-09 (AUC), 1.4e-08 / 1.0e-10 (log-loss), 0.0028 / 0.0028 (R2)",
+      "other": "Average rank: TabICLv2 4.66 vs RealTabPFN-2.5 5.11, TabPFN-2.5 5.45, LimiX 8.34, TabPFNv2 8.82. Binary (accuracy) 4.98 vs 4.82 RealTabPFN-2.5, but AUC 3.31 vs 4.62 and log-loss 2.83 vs 3.78 (TabICL v1.1: 8.48). Multiclass <=10 classes: accuracy 4.58 vs 5.64, AUC 3.38 vs 5.20, log-loss 2.67 vs 4.48. Regression: better RMSE and R2 than TabPFN-2.5, MAE slightly worse (4.63 vs 4.43). >10K-row datasets: TabICLv2 stage-3 rank 4.71 vs RealTabPFN-2.5 6.35. Elo and improvability are reported only in figures (no numeric Elo in the text)."
+    },
+    "other": [
+      {
+        "name": "TabArena (paper snapshot, 51 datasets: 38 classification <=10 classes, 13 regression; repeated CV, AUC/log-loss/RMSE) - average rank",
+        "value": "TabICLv2 (default, 8 estimators) 4.82 vs AutoGluon 1.5 (extreme, 4h) 3.88, AutoGluon 1.4 (extreme, 4h) 5.24, RealTabPFN-2.5 (tuned+ensembled) 5.88; pairwise win rate 57% vs AutoGluon 1.5 and 59% vs RealTabPFN-2.5 (T+E); README: beats tuned XGBoost/CatBoost/LightGBM on ~80% of datasets. Absolute Elo shown only in Figure J.5 (live value is joined from data/tabarena.json).",
+        "source": "https://arxiv.org/html/2602.11139 (Appendix J.2)"
+      },
+      {
+        "name": "TabArena subsets (paper snapshot) - average rank",
+        "value": "binary (24 datasets) 4.43, 2nd behind AutoGluon 1.5 at 3.83 and well ahead of RealTabPFN-2.5 (T+E) at 6.90; multiclass (14) 6.75, behind AutoGluon 1.5 4.00, RealTabPFN-2.5 (T+E) 4.25, AutoGluon 1.4 4.50 (but ahead of TabPFNv2 T+E 8.62, LimiX 9.31); regression (13) 4.54, tied with RealTabPFN-2.5 (T+E), behind AutoGluon 1.5 at 3.92",
+        "source": "https://arxiv.org/html/2602.11139 (Appendix J.3-J.5)"
+      },
+      {
+        "name": "TALENT extension, huge datasets (~600K samples)",
+        "value": "TabICLv2 still performs strongly on two ~600K-row classification datasets where TabPFN-2.5 hits out-of-memory errors (Figure 9)",
+        "source": "https://arxiv.org/html/2602.11139 (Section 6)"
+      },
+      {
+        "name": "Few-shot (16 training samples; 101 binary + 119 regression TALENT datasets via pytabkit)",
+        "value": "average rank 4.11 (classification AUC) / 5.02 (regression RMSE), 2nd behind RealTabPFN-2.5 (4.00 / 4.18), ahead of ExtraTrees (4.49 / 5.52), RandomForest, RealMLP-TD, LightGBM, XGBoost, CatBoost, TabM",
+        "source": "https://arxiv.org/html/2602.11139 (Appendix L.3, Table L.3)"
+      },
+      {
+        "name": "Few-shot vs. LLMs (9 TALENT classification datasets <=2,048 rows; mean accuracy)",
+        "value": "8/16/64 shots: TabICLv2 0.515/0.586/0.659 vs Claude Opus 4.6 0.536/0.541/0.606, Qwen3.5-112B 0.511/0.531/0.574, Qwen3.5-27B 0.505/0.526/0.569",
+        "source": "https://arxiv.org/html/2602.11139 (Appendix L.4, Table L.4)"
+      },
+      {
+        "name": "Ablation (60 TabPFNv2 development datasets, <=2,048 training rows, 280K stage-1 steps)",
+        "value": "new prior has the largest effect (training v2 on the v1 prior fails); early target inclusion, Muon instead of AdamW, and QASSMax each add ~100 Elo (~64% win rate); repeated feature grouping and prior filtering give smaller gains; a deeper 4/4/18-layer variant shows no clear improvement",
+        "source": "https://arxiv.org/html/2602.11139 (Section 7, Appendix C)"
+      },
+      {
+        "name": "Label-noise robustness (6 low-noise TabArena binary datasets, 0-50% flipped labels)",
+        "value": "TabICLv2 and RealTabPFN-2.5 degrade less than tree-based models (Figure L.1)",
+        "source": "https://arxiv.org/html/2602.11139 (Appendix L.6)"
+      }
+    ]
+  },
+  "differences_vs_predecessor": "Versus TabICL v1 (ICML 2025, arXiv 2502.05564; classification-only, ~same O(n^2 + n m^2) design and ~28M size, comparable runtime): (1) Tasks: adds regression via a 999-quantile pinball-loss head and separate regressor checkpoint; native many-class handling gains mixed-radix ensembling on top of v1's hierarchical classification. (2) Architecture: repeated feature grouping replaces independent per-feature embedding; target-aware embedding injects labels before column compression (v1 saw labels only in TF_icl); QASSMax scalable softmax in TF_col and TF_icl; 8 heads in TF_icl (v1: 4); TF_col outputs used directly as embeddings; bias-free LayerNorm for the regressor; non-interleaved RoPE; standard instead of zero residual init. (3) Prior: entirely new 'graph_scm' generator (Cauchy random graphs, 8 function families incl. CatBoost-style tree ensembles, GPs, EM-plateaus, quadratic, product; random converters; correlated scalar sampling; ExtraTrees filtering) replacing v1's MLP-SCM plus XGBoost-fitted tree-SCM prior (which the v2 architecture cannot even train on). (4) Pre-training: Muon instead of Adam/AdamW with 8x higher peak LR (8e-4 vs 1e-4), batch 64 instead of 512, 550K steps (500K/40K/10K) instead of ~162K (160K/2K/50), ~35M vs ~83M synthetic datasets, all modules trained in every stage (v1 froze all but TF_icl in stage 3), cautious/plain weight decay, gradient clipping 10, FlashAttention-3, on-the-fly generation instead of pre-generated data; ~24.5 H100 GPU-days on 4 GPUs vs 60 A100-days on 3 GPUs. (5) Inference: disk offloading via memory-mapped files on top of v1's CPU offloading (v1: 100K x 500 in 5 GB GPU / 32 GB RAM; v2: 1M x 500 in <50 GB GPU / 24 GB RAM), selective Q/K/V projections, KV cache, default 8 instead of 32 estimators, quantile-distribution utilities. (6) Results: v1.1 (v1 post-trained on an early v2 prior) has TALENT binary accuracy rank 8.48 vs 4.98 for v2, and v2 now beats RealTabPFN-2.5 whereas v1 trailed TabPFNv2 on small data; unlike v1, v2 no longer benefits from the TabPFN random-forest extension on large data.",
+  "sources": [
+    {"title": "TabICLv2: A Better, Faster, Scalable, and Open Tabular Foundation Model (arXiv abstract page, v1 2026-02-11, v2 2026-09-16, ICML 2026)", "url": "https://arxiv.org/abs/2602.11139"},
+    {"title": "TabICLv2 paper, full HTML (v2) - architecture, pre-training, prior, inference, benchmarks, appendices A-L", "url": "https://arxiv.org/html/2602.11139"},
+    {"title": "soda-inria/tabicl GitHub README (usage, limits FAQ, checkpoints, fine-tuning, pre-training notes)", "url": "https://github.com/soda-inria/tabicl"},
+    {"title": "soda-inria/tabicl LICENSE (BSD-3-Clause + Apache-2.0 for src/tabicl/forecast)", "url": "https://github.com/soda-inria/tabicl/blob/main/LICENSE"},
+    {"title": "soda-inria/tabicl CHANGES.md (release notes 2.0.x-2.2.0)", "url": "https://github.com/soda-inria/tabicl/blob/main/CHANGES.md"},
+    {"title": "TabICLv2 classifier pre-training recipe, stage 1 (scripts/train_v2_clf_stage1.sh; also stage2/3 and train_v2_reg_stage1/3.sh)", "url": "https://github.com/soda-inria/tabicl/blob/main/scripts/train_v2_clf_stage1.sh"},
+    {"title": "TabICLClassifier source (checkpoint names and Hugging Face repo id jingang/TabICL)", "url": "https://github.com/soda-inria/tabicl/blob/main/src/tabicl/_sklearn/classifier.py"},
+    {"title": "Hugging Face model repo jingang/TabICL (license metadata bsd-3-clause; v2 classifier/regressor checkpoints dated 2026-02-12)", "url": "https://huggingface.co/jingang/TabICL"},
+    {"title": "Hugging Face legacy repo jingang/TabICL-clf (v1/v1.1 checkpoints, bsd-3-clause)", "url": "https://huggingface.co/jingang/TabICL-clf"},
+    {"title": "PyPI: tabicl (2.0.0 released 2026-02-12; latest 2.2.0 2026-09-02; Python >=3.10)", "url": "https://pypi.org/project/tabicl/"},
+    {"title": "TabICL documentation (Read the Docs) - FAQ on dataset sizes, columns, GPUs", "url": "https://tabicl.readthedocs.io/en/latest/"},
+    {"title": "TabICL: A Tabular Foundation Model for In-Context Learning on Large Data (v1 paper, ICML 2025)", "url": "https://arxiv.org/abs/2502.05564"},
+    {"title": "TabICL v1 paper, full HTML (pre-training details, architecture, prior)", "url": "https://arxiv.org/html/2502.05564"},
+    {"title": "Probabl blog: Demystifying tabular foundation models (Gaël Varoquaux, 2026-02-12)", "url": "https://blog.probabl.ai/demystifying-tfms"},
+    {"title": "TabArena PR #259 '[New Model] TabICLv2' (merged 2026-02-17; default settings, no HPO, quantile support)", "url": "https://github.com/autogluon/tabarena/pull/259"},
+    {"title": "TabArena pull requests mentioning TabICLv2 (#259, #449, #526, #543)", "url": "https://github.com/autogluon/tabarena/pulls?q=TabICLv2"},
+    {"title": "nanotabicl: minimal TabICLv2 architecture + simplified prior", "url": "https://github.com/soda-inria/nanotabicl"}
+  ],
+  "notes": "Fact sheet compiled 2026-09-23 from the sources above. Numbers not stated by any source are null: exact parameter count per checkpoint (paper only says 'around 28M'), TabArena/TALENT Elo values (figures only), hard limits on classes/features/samples (none exist; the notes give the pre-training ranges and demonstrated scales). Discrepancies noticed: README says pre-training covered 300-48K training rows while the docs FAQ says 300-60K (the paper's stage 3 uses 400-60K total rows with ~80% training, so both are consistent readings); the paper reports cautious weight decay but the released recipe states it was not actually applied to the Muon runs; the paper says H100s while the stage-3 script mentions H200s for the reference run; the TabArena PR author observed slightly lower scores than the paper and attributes it to AMP. Gaël Varoquaux is also affiliated with Probabl (company), but the work is an INRIA Soda academic project. TabArena Elo and fit/predict times are joined from data/tabarena.json via tabarena_entry."
+}

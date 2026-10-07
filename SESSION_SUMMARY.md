@@ -1,6 +1,6 @@
 # Session summary and handover — tabular foundation model comparison
 
-Last updated 2026-09-30. Written so that a future Claude Code session can add models to this comparison without
+Last updated 2026-10-07. Written so that a future Claude Code session can add models to this comparison without
 re-discovering how it is built. **Read this file first**, then `data/SCHEMA.md`.
 
 ## 1. What this folder is
@@ -11,8 +11,8 @@ and synthetic priors, ICL mechanics, limits, speed/cost, licenses) plus TabArena
 
 Current state:
 
-- 13 model records in `data/models/` (12 with an official TabArena row, 1 provisional: NVIDIA Kumo Tabular).
-- TabArena snapshot: **TabArena-v0.1.9.3**, retrieved 2026-09-30 (view: Models only · all repeats · with imputation).
+- 15 model records in `data/models/`, all with an official TabArena row (no provisional entries).
+- TabArena snapshot: **TabArena-v0.1.9.4** (version inferred from the Space's latest commit), retrieved 2026-10-07 (view: Models only · all repeats · with imputation).
 - TALENT: 48 tables from 7 sources, 8 flagged `headline` (= default columns).
 - Folder was renamed from `tfn_comparison` to `tfm_comparison` on 2026-09-30; the Claude memory directory moved with it
   (`~/.claude/projects/-home-anne-Projects-tfm-comparison/memory/`).
@@ -22,6 +22,7 @@ Current state:
 | Date | Work |
 |---|---|
 | 2026-09-23 | Scraped the TabArena leaderboard (v0.1.9.2), found the 12 entries at or above TabICLv2 (Elo 1562 then), launched one research subagent per model plus one for TALENT, designed the JSON schema, built `index.html` and the build scripts. |
+| 2026-10-07 | Kumo Tabular got official, verified TabArena rows for all three sizes (Large #1 at Elo 1947, Medium 1888, Small 1790). Removed the self-reported block from `kumo-tabular` (now named "Kumo Tabular (Large)"), added `kumo-tabular-medium` and `kumo-tabular-small`. Re-checked the leaderboard: no other new entry at or above TabICLv2 (1558). This session ran in the cloud where huggingface.co was blocked for curl, so the CSVs were copied via WebFetch and checked against the previous snapshot (unchanged times/licences, contiguous indexes, win-rate pairs summing to 1). Worked from the GitHub repo AnneBeyer/tfm_comparison. |
 | 2026-09-30 | User asked for NVIDIA Kumo Tabular (released 2026-09-29). It is not on the official leaderboard yet (TabArena PR #625 open, maintainer runs in progress), so the optional `tabarena_self_reported` block and the † (provisional) rendering were added. Leaderboard refreshed to v0.1.9.3 (a Linear re-run shifted every Elo by 1–2 points; TabICLv2 is now 1560). Folder renamed; `scripts/validate_models.py` added. |
 
 ## 3. Layout and pipeline
@@ -65,7 +66,7 @@ Pipeline: `fetch_tabarena.sh` → `build_tabarena.py` → (`data/models/*.json`,
    and, with `?blobs=true`, file sizes), and the TabArena PR (`https://github.com/autogluon/tabarena/pulls?q=<name>`)
    which states the declared license, estimator counts, hardware and caveats. Press articles only as pointers.
 3. **Write `data/models/<id>.json`** following `data/SCHEMA.md`. Copy an existing record as a template
-   (`tabiclv2.json` for an open academic model, `tabpfn-3.5.json` for a licensed commercial one, `kumo-tabular.json`
+   (`tabiclv2.json` for an open academic model, `tabpfn-3.5.json` for a licensed commercial one, `kumo-tabular.json` as of commit b161253
    for a model that is not on the leaderboard yet). Rules: `id` = filename, lowercase; `tabarena_entry` must equal the
    leaderboard label exactly; numeric sort fields (`parameters_m`, `max_classes`, `max_features`, `max_samples`,
    `num_synthetic_datasets`, `max_context_rows`, `benchmarks.talent.avg_rank/elo`) are plain numbers or `null`;
@@ -128,7 +129,9 @@ Pipeline: `fetch_tabarena.sh` → `build_tabarena.py` → (`data/models/*.json`,
 |---|---|---|---|---|
 | `causilo` | Causilo | `Causilo (default)` | 2026-09-13 | [paper/report](https://arxiv.org/abs/2609.22866) · [code](https://github.com/nums-ai/causilo) · [weights](https://huggingface.co/nums-ai/causilo) · [TabArena PR](https://github.com/autogluon/tabarena/pull/536) |
 | `exaone-tabular` | EXAONE-Tabular | `EXAONE-Tabular (default)` | 2026-07-31 | [paper/report](https://arxiv.org/abs/2608.25774) · [code](https://github.com/LGAI-Research/EXAONE-Tabular) · [weights](https://huggingface.co/LG-AI-Research/EXAONE-Tabular) · [TabArena PR](https://github.com/autogluon/tabarena/pull/461) |
-| `kumo-tabular` | Kumo Tabular | `Kumo-Tabular (default)` (provisional †) | 2026-09-29 | [paper/report](https://huggingface.co/blog/nvidia/kumo-tabular) · [code](https://github.com/NVIDIA/structured-data-models) · [weights](https://huggingface.co/nvidia/Kumo-Tabular) · [TabArena PR](https://github.com/autogluon/tabarena/pull/625) |
+| `kumo-tabular` | Kumo Tabular (Large) | `Kumo-Tabular (default)` | 2026-09-29 | [paper/report](https://huggingface.co/blog/nvidia/kumo-tabular) · [code](https://github.com/NVIDIA/structured-data-models) · [weights](https://huggingface.co/nvidia/Kumo-Tabular) · [TabArena PR](https://github.com/autogluon/tabarena/pull/625) |
+| `kumo-tabular-medium` | Kumo Tabular (Medium) | `Kumo-Tabular-Medium (default)` | 2026-09-29 | [paper/report](https://huggingface.co/blog/nvidia/kumo-tabular) · [code](https://github.com/NVIDIA/structured-data-models) · [weights](https://huggingface.co/nvidia/Kumo-Tabular) · [TabArena PR](https://github.com/autogluon/tabarena/pull/625) |
+| `kumo-tabular-small` | Kumo Tabular (Small) | `Kumo-Tabular-Small (default)` | 2026-09-29 | [paper/report](https://huggingface.co/blog/nvidia/kumo-tabular) · [code](https://github.com/NVIDIA/structured-data-models) · [weights](https://huggingface.co/nvidia/Kumo-Tabular) · [TabArena PR](https://github.com/autogluon/tabarena/pull/625) |
 | `limix-2` | LimiX-2 | `LimiX-2 (default)` | 2026-09-16 | [paper/report](https://arxiv.org/abs/2609.17488) · [code](https://github.com/limix-ldm-ai/LimiX) · [weights](https://huggingface.co/stable-ai/LimiX-2) · [TabArena PR](https://github.com/autogluon/tabarena/pull/575) |
 | `mitra-v2` | Mitra-v2 | `Mitra-v2 (default)` | 2026-09-03 | [paper/report](https://arxiv.org/abs/2609.04540) · [code](https://huggingface.co/autogluon/mitra-finetune) · [weights](https://huggingface.co/autogluon/mitra-classifier-2) · [TabArena PR](https://github.com/autogluon/tabarena/pull/520) |
 | `realtabpfn-2.5` | RealTabPFN-2.5 | `RealTabPFN-2.5 (tuned + ensembled)` | 2025-11-06 | [paper/report](https://arxiv.org/abs/2511.08667) · [code](https://github.com/PriorLabs/TabPFN) · [weights](https://huggingface.co/Prior-Labs/tabpfn_2_5) · [TabArena PR](https://github.com/autogluon/tabarena/pull/242) |
@@ -158,8 +161,9 @@ Pipeline: `fetch_tabarena.sh` → `build_tabarena.py` → (`data/models/*.json`,
 
 ## 8. Known gaps and follow-ups
 
-- Kumo Tabular: official TabArena rows for Large/Medium/Small expected after autogluon/tabarena PR #625 merges; then
-  re-fetch, remove the self-reported block, and add `kumo-tabular-medium` / `kumo-tabular-small` records if wanted.
+- Kumo Tabular: done 2026-10-07 (official rows for all sizes). PR #625 itself was still open (BeyondArena OOM fixes); per-size TALENT numbers do not exist.
+- TabFM: a paper appeared on arXiv on 2026-09-29 (https://arxiv.org/abs/2609.37959, "TabFM: A Zero-Shot Foundation Model for Tabular Data"); the `tabfm` record still says "no paper" and should be updated from it.
+- `data/raw/tabarena_version_history.md`: the 2026-10-07 entry could not be copied from the leaderboard's Version History; re-check it from the page.
 - Causilo and TabPFN-3.5-Fast have no TALENT numbers in any source; TabFM has no paper at all (blog + repo only).
 - Parameter counts for Kumo Tabular and TabPFN-2.5/2.6 are file-size or third-party estimates (noted in the records).
 - Elo values shift with every leaderboard release because Elo is relative to the field; the intro states the snapshot.

@@ -50,7 +50,7 @@ A record may carry an optional `tabarena_self_reported` block (see `data/SCHEMA.
 TabArena numbers. The page shows them in the TabArena columns marked with † and excludes the model from the
 win-rate matrix and the timing scatter; as soon as `scripts/fetch_tabarena.sh` brings in an official row with the
 same `tabarena_entry` label, the official numbers take over automatically (the build prints a note).
-Current example: NVIDIA Kumo Tabular (TabArena PR #625 open on 2026-09-30).
+Previous example: NVIDIA Kumo Tabular (provisional from 2026-09-30 until its official rows appeared, 2026-10-07). No model is provisional at the moment.
 
 ## Selection rule
 

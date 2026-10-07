@@ -1,5 +1,9 @@
-# TabArena leaderboard version history (copied 2026-09-23, updated 2026-09-30 from https://tabarena-leaderboard.hf.space, Appendix > Version History)
-Current Version: TabArena-v0.1.9.3
+# TabArena leaderboard version history (copied 2026-09-23, updated 2026-09-30 and 2026-10-07 from https://tabarena-leaderboard.hf.space, Appendix > Version History)
+Current Version: TabArena-v0.1.9.4
+
+2026/10/0x-v0.1.9.4 (as far as could be determined on 2026-10-07; the Space's Version History text could not be read from this session, version taken from the Space's latest commit message "BeyondArena: combinable split / size / feature filters and a task selector (TabArena-v0.1.9.4)"):
+  - The leaderboard CSV exports retrieved 2026-10-07 contain official, verified rows for NVIDIA Kumo Tabular in three sizes: Kumo-Tabular (default) [Large], Kumo-Tabular-Medium (default), Kumo-Tabular-Small (default); license OpenMDW-1.1, commercial use permitted. Kumo-Tabular (Large) is first overall (Elo 1947). Other models' Elo shift by a few points as a consequence. The code PR autogluon/tabarena#625 was still open on 2026-10-07.
+  - BeyondArena: combinable split / size / feature filters and a task selector.
 
 2026/09/28-v0.1.9.3:
   - Updated verified model: Linear, re-run with L1 regularization applied to classification (tuned/ensembled Linear rows gain Elo; default unchanged). Other models' Elo shift by 1-2 points as a consequence.
